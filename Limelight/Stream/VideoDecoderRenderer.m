@@ -35,6 +35,11 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
     
     CADisplayLink* _displayLink;
     BOOL framePacing;
+    
+    NSLock *_queueLock;
+    NSMutableArray *_sampleBufferQueue;
+    NSThread *_submitThread;
+    BOOL _running;
 }
 
 - (void)reinitializeDisplayLayer
@@ -90,6 +95,10 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
     
     [self reinitializeDisplayLayer];
     
+    _sampleBufferQueue = [[NSMutableArray alloc] init];
+    _queueLock = [[NSLock alloc] init];
+    _running = NO;
+    
     return self;
 }
 
@@ -101,14 +110,27 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
 
 - (void)start
 {
-    _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(displayLinkCallback:)];
-    if (@available(iOS 15.0, tvOS 15.0, *)) {
-        _displayLink.preferredFrameRateRange = CAFrameRateRangeMake(self->frameRate, self->frameRate, self->frameRate);
+    if (_running) return;
+    _running = YES;
+    
+    if(framePacing)
+    {
+        _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(displayLinkCallback:)];
+        if (@available(iOS 15.0, tvOS 15.0, *)) {
+            _displayLink.preferredFrameRateRange = CAFrameRateRangeMake(self->frameRate, self->frameRate, self->frameRate);
+        }
+        else {
+            _displayLink.preferredFramesPerSecond = self->frameRate;
+        }
+        [_displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
     }
-    else {
-        _displayLink.preferredFramesPerSecond = self->frameRate;
+    else
+    {
+        _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(displayLinkCallback:)];
     }
-    [_displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
+    
+    _submitThread = [[NSThread alloc] initWithTarget:self selector:@selector(decodeThreadMain) object:nil];
+    [_submitThread start];
 }
 
 // TODO: Refactor this
@@ -116,33 +138,68 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
 
 - (void)displayLinkCallback:(CADisplayLink *)sender
 {
+    // Calculate the actual display refresh rate
+    double displayRefreshRate = 1 / (_displayLink.targetTimestamp - _displayLink.timestamp);
+    
+    // Only keep 1 buffer frame if the display refresh rate is >= 90% of our stream frame rate.
+    // Battery saver, accessibility settings, or device thermals can cause the actual
+    // refresh rate of the display to drop below the physical maximum.
+    NSUInteger bufferSize = 0;
+    if (displayRefreshRate >= frameRate * 0.9f)
+    {
+        bufferSize = 1;
+    }
+    // Always try to pop one frame per refresh
+    do {
+        if(_sampleBufferQueue.count == 0)
+        {
+            break;
+        }
+        [_queueLock lock];
+        CMSampleBufferRef sampleBuffer = (__bridge CMSampleBufferRef)_sampleBufferQueue.firstObject;
+        [_sampleBufferQueue removeObjectAtIndex:0];
+        [_queueLock unlock];
+        [self->displayLayer enqueueSampleBuffer:sampleBuffer];
+        CFRelease(sampleBuffer);
+    }while (_sampleBufferQueue.count > bufferSize); // If possible, keep 1 frame to avoid jittering.
+    
+}
+
+- (void)decodeThreadMain {
+    
     VIDEO_FRAME_HANDLE handle;
     PDECODE_UNIT du;
-    
-    while (LiPollNextVideoFrame(&handle, &du)) {
-        LiCompleteVideoFrame(handle, DrSubmitDecodeUnit(du));
-        
-        if (framePacing) {
-            // Calculate the actual display refresh rate
-            double displayRefreshRate = 1 / (_displayLink.targetTimestamp - _displayLink.timestamp);
-            
-            // Only pace frames if the display refresh rate is >= 90% of our stream frame rate.
-            // Battery saver, accessibility settings, or device thermals can cause the actual
-            // refresh rate of the display to drop below the physical maximum.
-            if (displayRefreshRate >= frameRate * 0.9f) {
-                // Keep one pending frame to smooth out gaps due to
-                // network jitter at the cost of 1 frame of latency
-                if (LiGetPendingVideoFrames() == 1) {
-                    break;
+    while (_running && ![[NSThread currentThread] isCancelled]) {
+        @autoreleasepool {
+            {
+                if(!LiWaitForNextVideoFrame(&handle,&du))
+                {
+                    continue;
                 }
             }
+            LiCompleteVideoFrame(handle, DrSubmitDecodeUnit(du));
         }
     }
 }
 
 - (void)stop
 {
-    [_displayLink invalidate];
+    if (!_running) return;
+    _running = NO;
+    if (_submitThread) {
+        [_submitThread cancel];
+        _submitThread = nil;
+    }
+    [_queueLock lock];
+    while (_sampleBufferQueue.count > 0) {
+        CMSampleBufferRef sampleBuffer = (__bridge CMSampleBufferRef)_sampleBufferQueue.firstObject;
+        [_sampleBufferQueue removeObjectAtIndex:0];
+        CFRelease(sampleBuffer);
+    }
+    [_queueLock unlock];
+    if(_displayLink){
+        [_displayLink invalidate];
+    }
 }
 
 #define NALU_START_PREFIX_SIZE 3
@@ -595,20 +652,27 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
     }
 
     // Enqueue the next frame
-    [self->displayLayer enqueueSampleBuffer:sampleBuffer];
-    
+    if(framePacing)
+    {
+        [_queueLock lock];
+        [_sampleBufferQueue addObject:(__bridge id)sampleBuffer];
+        [_queueLock unlock];
+    }
+    else
+    {
+        [self->displayLayer enqueueSampleBuffer:sampleBuffer];
+        CFRelease(sampleBuffer);
+    }
     if (du->frameType == FRAME_TYPE_IDR) {
-        // Ensure the layer is visible now
-        self->displayLayer.hidden = NO;
-        
-        // Tell our parent VC to hide the progress indicator
-        [self->_callbacks videoContentShown];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            self->displayLayer.hidden = NO;
+            [self->_callbacks videoContentShown];
+        });
     }
     
     // Dereference the buffers
     CFRelease(dataBlockBuffer);
     CFRelease(frameBlockBuffer);
-    CFRelease(sampleBuffer);
     
     return DR_OK;
 }
