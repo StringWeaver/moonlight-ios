@@ -113,22 +113,15 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
     if (_running) return;
     _running = YES;
     
-    if(framePacing)
-    {
-        _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(displayLinkCallback:)];
-        if (@available(iOS 15.0, tvOS 15.0, *)) {
-            _displayLink.preferredFrameRateRange = CAFrameRateRangeMake(self->frameRate, self->frameRate, self->frameRate);
-        }
-        else {
-            _displayLink.preferredFramesPerSecond = self->frameRate;
-        }
-        [_displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
+    _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(displayLinkCallback:)];
+    if (@available(iOS 15.0, tvOS 15.0, *)) {
+        _displayLink.preferredFrameRateRange = CAFrameRateRangeMake(self->frameRate, self->frameRate, self->frameRate);
     }
-    else
-    {
-        _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(displayLinkCallback:)];
+    else {
+        _displayLink.preferredFramesPerSecond = self->frameRate;
     }
-    
+    [_displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
+
     _submitThread = [[NSThread alloc] initWithTarget:self selector:@selector(decodeThreadMain) object:nil];
     [_submitThread start];
 }
@@ -138,6 +131,10 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
 
 - (void)displayLinkCallback:(CADisplayLink *)sender
 {
+    if(framePacing)
+    {
+        return;
+    }
     // Calculate the actual display refresh rate
     double displayRefreshRate = 1 / (_displayLink.targetTimestamp - _displayLink.timestamp);
     
@@ -663,7 +660,7 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
         [self->displayLayer enqueueSampleBuffer:sampleBuffer];
         CFRelease(sampleBuffer);
     }
-    if (du->frameType == FRAME_TYPE_IDR) {
+    if (du->frameType == FRAME_TYPE_IDR && self->displayLayer.hidden == YES) {
         dispatch_async(dispatch_get_main_queue(), ^{
             self->displayLayer.hidden = NO;
             [self->_callbacks videoContentShown];
