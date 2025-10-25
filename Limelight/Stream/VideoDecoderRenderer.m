@@ -131,7 +131,7 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
 
 - (void)displayLinkCallback:(CADisplayLink *)sender
 {
-    if(framePacing)
+    if(!framePacing)
     {
         return;
     }
