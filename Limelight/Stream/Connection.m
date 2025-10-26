@@ -423,6 +423,9 @@ void ClSetControllerLED(uint16_t controllerNumber, uint8_t r, uint8_t g, uint8_t
     _streamConfig.supportedVideoFormats = config.supportedVideoFormats;
     _streamConfig.audioConfiguration = config.audioConfiguration;
     
+    _streamConfig.colorSpace = COLORSPACE_REC_709;
+    _streamConfig.colorRange = COLOR_RANGE_FULL;
+    
     // Since we require iOS 12 or above, we're guaranteed to be running
     // on a 64-bit device with ARMv8 crypto instructions, so we don't
     // need to check for that here.
