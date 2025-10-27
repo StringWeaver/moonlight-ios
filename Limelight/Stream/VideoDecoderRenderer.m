@@ -131,8 +131,7 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
 
 - (void)displayLinkCallback:(CADisplayLink *)sender
 {
-    if(!framePacing)
-    {
+    if(!framePacing) {
         return;
     }
     // Calculate the actual display refresh rate
@@ -142,24 +141,22 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
     // Battery saver, accessibility settings, or device thermals can cause the actual
     // refresh rate of the display to drop below the physical maximum.
     NSUInteger bufferSize = 0;
-    if (displayRefreshRate >= frameRate * 0.9f)
-    {
+    if (displayRefreshRate >= frameRate * 0.9f) {
         bufferSize = 1;
     }
     // Always try to pop one frame per refresh
+    [_queueLock lock];
     do {
-        if(_sampleBufferQueue.count == 0)
-        {
+        if(_sampleBufferQueue.count == 0) {
             break;
         }
-        [_queueLock lock];
+        
         CMSampleBufferRef sampleBuffer = (__bridge CMSampleBufferRef)_sampleBufferQueue.firstObject;
         [_sampleBufferQueue removeObjectAtIndex:0];
-        [_queueLock unlock];
         [self->displayLayer enqueueSampleBuffer:sampleBuffer];
         CFRelease(sampleBuffer);
-    }while (_sampleBufferQueue.count > bufferSize); // If possible, keep 1 frame to avoid jittering.
-    
+    } while (_sampleBufferQueue.count > bufferSize); // If possible, keep 1 frame to avoid jittering.
+    [_queueLock unlock];
 }
 
 - (void)decodeThreadMain {
@@ -168,11 +165,8 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
     PDECODE_UNIT du;
     while (_running && ![[NSThread currentThread] isCancelled]) {
         @autoreleasepool {
-            {
-                if(!LiWaitForNextVideoFrame(&handle,&du))
-                {
-                    continue;
-                }
+            if(!LiWaitForNextVideoFrame(&handle,&du)) {
+                continue;
             }
             LiCompleteVideoFrame(handle, DrSubmitDecodeUnit(du));
         }
@@ -194,7 +188,7 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
         CFRelease(sampleBuffer);
     }
     [_queueLock unlock];
-    if(_displayLink){
+    if(_displayLink) {
         [_displayLink invalidate];
     }
 }
@@ -649,14 +643,12 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
     }
 
     // Enqueue the next frame
-    if(framePacing)
-    {
+    if(framePacing) {
         [_queueLock lock];
         [_sampleBufferQueue addObject:(__bridge id)sampleBuffer];
         [_queueLock unlock];
     }
-    else
-    {
+    else {
         [self->displayLayer enqueueSampleBuffer:sampleBuffer];
         CFRelease(sampleBuffer);
     }
