@@ -635,6 +635,15 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
                                   formatDesc, 1, 1,
                                   &sampleTiming, 0, NULL,
                                   &sampleBuffer);
+    
+    CFArrayRef attachmentsArray = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, YES);
+    if (attachmentsArray && CFArrayGetCount(attachmentsArray) > 0) {
+        CFMutableDictionaryRef attachments = (CFMutableDictionaryRef)CFArrayGetValueAtIndex(attachmentsArray, 0);
+        if (attachments) {
+            // sunshine don't use B-frames, hint decoder about this.
+            CFDictionarySetValue(attachments, kCMSampleAttachmentKey_EarlierDisplayTimesAllowed, kCFBooleanTrue);
+        }
+    }
     if (status != noErr) {
         Log(LOG_E, @"CMSampleBufferCreate failed: %d", (int)status);
         CFRelease(dataBlockBuffer);
