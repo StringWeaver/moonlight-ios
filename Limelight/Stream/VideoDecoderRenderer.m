@@ -123,6 +123,7 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
     [_displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
 
     _submitThread = [[NSThread alloc] initWithTarget:self selector:@selector(decodeThreadMain) object:nil];
+    [_submitThread setQualityOfService:NSQualityOfServiceUserInteractive];
     [_submitThread start];
 }
 
