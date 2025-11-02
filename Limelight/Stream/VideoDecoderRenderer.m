@@ -50,7 +50,8 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
     displayLayer.backgroundColor = [UIColor blackColor].CGColor;
     
    
-    
+    displayLayer.opaque = YES;
+    displayLayer.drawsAsynchronously = YES;
     displayLayer.position = CGPointMake(CGRectGetMidX(_view.bounds), CGRectGetMidY(_view.bounds));
     displayLayer.bounds = _view.bounds;
     displayLayer.videoGravity = AVLayerVideoGravityResizeAspect;
