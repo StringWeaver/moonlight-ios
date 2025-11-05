@@ -1,6 +1,24 @@
 {
-  "originHash" : "f17bf6f1131c7255a75ffd6a989b69573cb49c332e612dffb429905d8d7afe72",
+  "originHash" : "fdea4cf9f7a82d6801539249997f66194c5c4e9dcbd367850002d1d862578260",
   "pins" : [
+    {
+      "identity" : "ffmpegkit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/kingslay/FFmpegKit.git",
+      "state" : {
+        "revision" : "85b77c589de0360c111de16752db86b60496d70b",
+        "version" : "6.1.3"
+      }
+    },
+    {
+      "identity" : "ogg-binary-xcframework",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/sbooth/ogg-binary-xcframework",
+      "state" : {
+        "revision" : "c0e822e18738ad913864e98d9614927ac1e9337c",
+        "version" : "0.1.2"
+      }
+    },
     {
       "identity" : "openssl-package",
       "kind" : "remoteSourceControl",
@@ -9,7 +27,16 @@
         "revision" : "b9eb055fdf73e595cb4b9f665d13dc85975bf80a",
         "version" : "3.3.2000"
       }
+    },
+    {
+      "identity" : "opus-binary-xcframework",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/sbooth/opus-binary-xcframework.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "74201a6af424e7e3a007fd5e401e9d2ce6896628"
+      }
     }
   ],
-  "version" : 2
+  "version" : 3
 }

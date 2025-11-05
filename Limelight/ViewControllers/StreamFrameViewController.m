@@ -23,12 +23,13 @@
 #import <AVKit/AVDisplayManager.h>
 #import <AVKit/UIWindow.h>
 #endif
-
+#if TARGET_OS_TV 
 @interface AVDisplayCriteria()
 @property(readonly) int videoDynamicRange;
 @property(readonly, nonatomic) float refreshRate;
 - (id)initWithRefreshRate:(float)arg1 videoDynamicRange:(int)arg2;
 @end
+#endif
 
 @implementation StreamFrameViewController {
     ControllerSupport *_controllerSupport;
