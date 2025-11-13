@@ -310,7 +310,7 @@ void ArDecodeAndPlaySample(char* sampleData, int sampleLength)
                                         (short*)audioBuffer, audioConfig.samplesPerFrame, 0);
     if (decodeLen > 0) {
         // Backpressure: ensure we don't queue too many buffers locally
-        while ((atomic_load(&queuedFrames) / audioConfig.samplesPerFrame) > 10) {
+        while ((atomic_load(&queuedFrames) / audioFrameSize) > 10) {
             // sleep 1 ms
             usleep(1000);
         }
