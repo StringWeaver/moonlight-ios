@@ -8,9 +8,11 @@
 
 /* Begin PBXBuildFile section */
 		693B3A9B218638CD00982F7B /* Settings.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 693B3A9A218638CD00982F7B /* Settings.bundle */; };
-		6A20E6802EBBB78D0007F818 /* FFmpegKit in Frameworks */ = {isa = PBXBuildFile; productRef = 6A20E67F2EBBB78D0007F818 /* FFmpegKit */; };
-		6A9FFE622EBA4B41002C9D63 /* ogg in Frameworks */ = {isa = PBXBuildFile; productRef = 6A9FFE612EBA4B41002C9D63 /* ogg */; };
-		6ABC85012EB9D92300E6D7AC /* opus in Frameworks */ = {isa = PBXBuildFile; productRef = 6ABC85002EB9D92300E6D7AC /* opus */; };
+		6AD146482EC9CA6500F3B066 /* Libavcodec in Frameworks */ = {isa = PBXBuildFile; productRef = 6AD146472EC9CA6500F3B066 /* Libavcodec */; };
+		6AD1464A2EC9CA6500F3B066 /* Libavfilter in Frameworks */ = {isa = PBXBuildFile; productRef = 6AD146492EC9CA6500F3B066 /* Libavfilter */; };
+		6AD1464C2EC9CA6500F3B066 /* Libavformat in Frameworks */ = {isa = PBXBuildFile; productRef = 6AD1464B2EC9CA6500F3B066 /* Libavformat */; };
+		6AD1464E2EC9CA6500F3B066 /* Libavutil in Frameworks */ = {isa = PBXBuildFile; productRef = 6AD1464D2EC9CA6500F3B066 /* Libavutil */; };
+		6AD146582EC9CB6E00F3B066 /* FFmpegKit in Frameworks */ = {isa = PBXBuildFile; platformFilter = maccatalyst; productRef = 6AD146572EC9CB6E00F3B066 /* FFmpegKit */; };
 		98181BED2791281100E43572 /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 98181BEC2791281100E43572 /* CoreMotion.framework */; };
 		9819CC14254F107A008A7C8E /* RelativeTouchHandler.m in Sources */ = {isa = PBXBuildFile; fileRef = 9819CC13254F107A008A7C8E /* RelativeTouchHandler.m */; };
 		9819CC1D254F1730008A7C8E /* RelativeTouchHandler.m in Sources */ = {isa = PBXBuildFile; fileRef = 9819CC13254F107A008A7C8E /* RelativeTouchHandler.m */; };
@@ -273,10 +275,6 @@
 		FB89462619F646E200339C8A /* StreamFrameViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StreamFrameViewController.h; sourceTree = "<group>"; };
 		FB89462719F646E200339C8A /* StreamFrameViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StreamFrameViewController.m; sourceTree = "<group>"; };
 		FB89463719F6473800339C8A /* Launch Screen.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = "Launch Screen.xib"; sourceTree = SOURCE_ROOT; };
-		FB8946E519F6AFB800339C8A /* opus.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = opus.h; sourceTree = "<group>"; };
-		FB8946E619F6AFB800339C8A /* opus_defines.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = opus_defines.h; sourceTree = "<group>"; };
-		FB8946E719F6AFB800339C8A /* opus_multistream.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = opus_multistream.h; sourceTree = "<group>"; };
-		FB8946E819F6AFB800339C8A /* opus_types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = opus_types.h; sourceTree = "<group>"; };
 		FB9AFD261A7C84ED00872C98 /* HttpResponse.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HttpResponse.h; sourceTree = "<group>"; };
 		FB9AFD271A7C84ED00872C98 /* HttpResponse.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HttpResponse.m; sourceTree = "<group>"; };
 		FB9AFD301A7D867C00872C98 /* AppAssetRetriever.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppAssetRetriever.h; sourceTree = "<group>"; };
@@ -328,18 +326,20 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				6A9FFE622EBA4B41002C9D63 /* ogg in Frameworks */,
+				6AD1464E2EC9CA6500F3B066 /* Libavutil in Frameworks */,
 				9890CF6B203B7EE1006C4B06 /* libxml2.tbd in Frameworks */,
-				6A20E6802EBBB78D0007F818 /* FFmpegKit in Frameworks */,
 				98CFB82F1CAD481B0048EF74 /* libmoonlight-common.a in Frameworks */,
+				6AD1464C2EC9CA6500F3B066 /* Libavformat in Frameworks */,
 				FB290CF419B2C406004C83CF /* CoreGraphics.framework in Frameworks */,
 				FB290CF819B2C406004C83CF /* CoreData.framework in Frameworks */,
+				6AD146482EC9CA6500F3B066 /* Libavcodec in Frameworks */,
 				98181BED2791281100E43572 /* CoreMotion.framework in Frameworks */,
 				F74BEF9C2C1A705600224667 /* OpenSSL in Frameworks */,
 				FB290CF619B2C406004C83CF /* UIKit.framework in Frameworks */,
+				6AD146582EC9CB6E00F3B066 /* FFmpegKit in Frameworks */,
+				6AD1464A2EC9CA6500F3B066 /* Libavfilter in Frameworks */,
 				FB290CF219B2C406004C83CF /* Foundation.framework in Frameworks */,
 				FB4679011A57048000377732 /* CoreFoundation.framework in Frameworks */,
-				6ABC85012EB9D92300E6D7AC /* opus in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -559,37 +559,9 @@
 		FB89468F19F6AFB800339C8A /* libs */ = {
 			isa = PBXGroup;
 			children = (
-				FB8946E219F6AFB800339C8A /* opus */,
 				6A70730D2EBAF55C00C0D327 /* FFmpeg */,
 			);
 			path = libs;
-			sourceTree = "<group>";
-		};
-		FB8946E219F6AFB800339C8A /* opus */ = {
-			isa = PBXGroup;
-			children = (
-				FB8946E319F6AFB800339C8A /* include */,
-			);
-			path = opus;
-			sourceTree = "<group>";
-		};
-		FB8946E319F6AFB800339C8A /* include */ = {
-			isa = PBXGroup;
-			children = (
-				FB8946E419F6AFB800339C8A /* opus */,
-			);
-			path = include;
-			sourceTree = "<group>";
-		};
-		FB8946E419F6AFB800339C8A /* opus */ = {
-			isa = PBXGroup;
-			children = (
-				FB8946E519F6AFB800339C8A /* opus.h */,
-				FB8946E619F6AFB800339C8A /* opus_defines.h */,
-				FB8946E719F6AFB800339C8A /* opus_multistream.h */,
-				FB8946E819F6AFB800339C8A /* opus_types.h */,
-			);
-			path = opus;
 			sourceTree = "<group>";
 		};
 		FB9AFD2F1A7C979700872C98 /* Http */ = {
@@ -696,9 +668,11 @@
 			name = Moonlight;
 			packageProductDependencies = (
 				F74BEF9B2C1A705600224667 /* OpenSSL */,
-				6ABC85002EB9D92300E6D7AC /* opus */,
-				6A9FFE612EBA4B41002C9D63 /* ogg */,
-				6A20E67F2EBBB78D0007F818 /* FFmpegKit */,
+				6AD146472EC9CA6500F3B066 /* Libavcodec */,
+				6AD146492EC9CA6500F3B066 /* Libavfilter */,
+				6AD1464B2EC9CA6500F3B066 /* Libavformat */,
+				6AD1464D2EC9CA6500F3B066 /* Libavutil */,
+				6AD146572EC9CB6E00F3B066 /* FFmpegKit */,
 			);
 			productName = Limelight;
 			productReference = FB290CEE19B2C406004C83CF /* Moonlight.app */;
@@ -740,9 +714,7 @@
 			mainGroup = FB290CE519B2C406004C83CF;
 			packageReferences = (
 				F74BEF9A2C1A705600224667 /* XCRemoteSwiftPackageReference "OpenSSL-Package" */,
-				6ABC84FD2EB9D84F00E6D7AC /* XCRemoteSwiftPackageReference "opus-binary-xcframework" */,
-				6A9FFE602EBA4B41002C9D63 /* XCRemoteSwiftPackageReference "ogg-binary-xcframework" */,
-				6A20E67E2EBBB78D0007F818 /* XCRemoteSwiftPackageReference "FFmpegKit" */,
+				6AD146442EC9C97000F3B066 /* XCRemoteSwiftPackageReference "FFmpegKit" */,
 			);
 			productRefGroup = FB290CEF19B2C406004C83CF /* Products */;
 			projectDirPath = "";
@@ -1211,7 +1183,7 @@
 					"$(PROJECT_DIR)/libs/FFmpeg/lib/iOS-Sim",
 				);
 				MARKETING_VERSION = 9.0.2;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.moonlight-stream.Moonlight";
+				PRODUCT_BUNDLE_IDENTIFIER = com.StringWeaver.moonlight;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
 				SKIP_INSTALL = NO;
@@ -1235,7 +1207,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = DM46QST4M7;
+				DEVELOPMENT_TEAM = S3JJX3QZ65;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "Limelight/Limelight-Prefix.pch";
 				HEADER_SEARCH_PATHS = (
@@ -1269,7 +1241,7 @@
 					"$(PROJECT_DIR)/libs/FFmpeg/lib/iOS-Sim",
 				);
 				MARKETING_VERSION = 9.0.2;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.moonlight-stream.Moonlight";
+				PRODUCT_BUNDLE_IDENTIFIER = com.StringWeaver.moonlight;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
 				SKIP_INSTALL = NO;
@@ -1319,28 +1291,12 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		6A20E67E2EBBB78D0007F818 /* XCRemoteSwiftPackageReference "FFmpegKit" */ = {
+		6AD146442EC9C97000F3B066 /* XCRemoteSwiftPackageReference "FFmpegKit" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/kingslay/FFmpegKit.git";
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 6.1.3;
-			};
-		};
-		6A9FFE602EBA4B41002C9D63 /* XCRemoteSwiftPackageReference "ogg-binary-xcframework" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/sbooth/ogg-binary-xcframework";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.1.2;
-			};
-		};
-		6ABC84FD2EB9D84F00E6D7AC /* XCRemoteSwiftPackageReference "opus-binary-xcframework" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/sbooth/opus-binary-xcframework.git";
-			requirement = {
-				branch = main;
-				kind = branch;
 			};
 		};
 		F74BEF9A2C1A705600224667 /* XCRemoteSwiftPackageReference "OpenSSL-Package" */ = {
@@ -1354,20 +1310,30 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		6A20E67F2EBBB78D0007F818 /* FFmpegKit */ = {
+		6AD146472EC9CA6500F3B066 /* Libavcodec */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 6A20E67E2EBBB78D0007F818 /* XCRemoteSwiftPackageReference "FFmpegKit" */;
+			package = 6AD146442EC9C97000F3B066 /* XCRemoteSwiftPackageReference "FFmpegKit" */;
+			productName = Libavcodec;
+		};
+		6AD146492EC9CA6500F3B066 /* Libavfilter */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6AD146442EC9C97000F3B066 /* XCRemoteSwiftPackageReference "FFmpegKit" */;
+			productName = Libavfilter;
+		};
+		6AD1464B2EC9CA6500F3B066 /* Libavformat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6AD146442EC9C97000F3B066 /* XCRemoteSwiftPackageReference "FFmpegKit" */;
+			productName = Libavformat;
+		};
+		6AD1464D2EC9CA6500F3B066 /* Libavutil */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6AD146442EC9C97000F3B066 /* XCRemoteSwiftPackageReference "FFmpegKit" */;
+			productName = Libavutil;
+		};
+		6AD146572EC9CB6E00F3B066 /* FFmpegKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6AD146442EC9C97000F3B066 /* XCRemoteSwiftPackageReference "FFmpegKit" */;
 			productName = FFmpegKit;
-		};
-		6A9FFE612EBA4B41002C9D63 /* ogg */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 6A9FFE602EBA4B41002C9D63 /* XCRemoteSwiftPackageReference "ogg-binary-xcframework" */;
-			productName = ogg;
-		};
-		6ABC85002EB9D92300E6D7AC /* opus */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 6ABC84FD2EB9D84F00E6D7AC /* XCRemoteSwiftPackageReference "opus-binary-xcframework" */;
-			productName = opus;
 		};
 		F74BEF9B2C1A705600224667 /* OpenSSL */ = {
 			isa = XCSwiftPackageProductDependency;
