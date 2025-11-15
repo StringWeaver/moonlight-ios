@@ -14,7 +14,6 @@
 #include <stdatomic.h>
 
 #include "Limelight.h"
-#include "opus_multistream.h"
 
 @implementation Connection {
     SERVER_INFORMATION _serverInfo;
@@ -29,7 +28,6 @@
 }
 
 static NSLock* initLock;
-static OpusMSDecoder* opusDecoder;
 static id<ConnectionCallbacks> _callbacks;
 static int lastFrameNumber;
 static int activeVideoFormat;
@@ -41,11 +39,10 @@ static NSLock* videoStatsLock;
 static AVAudioEngine *audioEngine = nil;
 static AVAudioPlayerNode *playerNode = nil;
 static AVAudioConverter* audioConverter = nil;
-static AVAudioFormat *fromPcmFormat = nil;
-static AVAudioFormat *toPcmFormat = nil;
+static AVAudioFormat *inputOpusFormat = nil;
+static AVAudioFormat *outputPcmFormat = nil;
 static OPUS_MULTISTREAM_CONFIGURATION audioConfig;
-static int audioFrameSampleCount = 0;    // bytes per decoded frame
-static atomic_int queuedFrames = 0;
+static atomic_int queuePackets = 0;
 
 static VideoDecoderRenderer* renderer;
 
@@ -193,7 +190,6 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit)
 
 int ArInit(int audioConfiguration, POPUS_MULTISTREAM_CONFIGURATION opusConfig, void* context, int flags)
 {
-    int err;
     
     // Prepare AVAudioSession
     NSError *sessionError = nil;
@@ -211,24 +207,37 @@ int ArInit(int audioConfiguration, POPUS_MULTISTREAM_CONFIGURATION opusConfig, v
     audioEngine = [[AVAudioEngine alloc] init];
     playerNode = [[AVAudioPlayerNode alloc] init];
     [audioEngine attachNode:playerNode];
-    
-    // Create PCM float format (non-interleaved) matching sample rate and channels
-    fromPcmFormat = [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatInt16
-                                                  sampleRate:opusConfig->sampleRate
-                                                    channels:opusConfig->channelCount
-                                                 interleaved:YES];
-    toPcmFormat =[[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatFloat32
+
+    outputPcmFormat =[[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatFloat32
                                                   sampleRate:opusConfig->sampleRate
                                                     channels:opusConfig->channelCount
                                                  interleaved:NO];
-    if (!fromPcmFormat || !toPcmFormat) {
+    if ( !outputPcmFormat) {
         Log(LOG_E, @"Failed to create audio format");
         ArCleanup();
         return -1;
     }
-    
+    // Create compressed Opus AVAudioFormat (kAudioFormatOpus)
+    AudioStreamBasicDescription opusDesc = {
+        .mSampleRate       = opusConfig->sampleRate,
+        .mFormatID         = kAudioFormatOpus,
+        .mFormatFlags      = 0,
+        .mBytesPerPacket   = 0,
+        .mFramesPerPacket  = (UInt32)opusConfig->samplesPerFrame,
+        .mBytesPerFrame    = 0, //variable size
+        .mChannelsPerFrame = (UInt32)opusConfig->channelCount,
+        .mBitsPerChannel   = 0,
+        .mReserved         = 0
+    };
+
+    inputOpusFormat = [[AVAudioFormat alloc] initWithStreamDescription:&opusDesc];
+    if (!inputOpusFormat) {
+        Log(LOG_E, @"Failed to create Opus AVAudioFormat (kAudioFormatOpus)");
+        ArCleanup();
+        return -1;
+    }
     // Create converter from int16(interleaved) -> float32(non-interleaved)
-    audioConverter = [[AVAudioConverter alloc] initFromFormat:fromPcmFormat toFormat:toPcmFormat];
+    audioConverter = [[AVAudioConverter alloc] initFromFormat:inputOpusFormat toFormat:outputPcmFormat];
     if (!audioConverter) {
         Log(LOG_E, @"Failed to create AVAudioConverter");
         ArCleanup();
@@ -236,7 +245,7 @@ int ArInit(int audioConfiguration, POPUS_MULTISTREAM_CONFIGURATION opusConfig, v
     }
     
     @try{
-        [audioEngine connect:playerNode to:audioEngine.mainMixerNode format:toPcmFormat];
+        [audioEngine connect:playerNode to:audioEngine.mainMixerNode format:outputPcmFormat];
     } @catch (NSException *e) {
         Log(LOG_E, @"Failed to connect playerNode: %@", e);
         ArCleanup();
@@ -252,36 +261,18 @@ int ArInit(int audioConfiguration, POPUS_MULTISTREAM_CONFIGURATION opusConfig, v
     
     // Keep opus decoder and buffers
     audioConfig = *opusConfig;
-    audioFrameSampleCount = opusConfig->samplesPerFrame * opusConfig->channelCount;
 
-    
-    opusDecoder = opus_multistream_decoder_create(opusConfig->sampleRate,
-                                                  opusConfig->channelCount,
-                                                  opusConfig->streams,
-                                                  opusConfig->coupledStreams,
-                                                  opusConfig->mapping,
-                                                  &err);
-    if (opusDecoder == NULL) {
-        Log(LOG_E, @"Failed to create Opus decoder");
-        ArCleanup();
-        return -1;
-    }
-    
     // Start playback
     [playerNode play];
     
     // Initialize queuedFrames
-    atomic_store(&queuedFrames, 0);
+    atomic_store(&queuePackets, 0);
     
     return 0;
 }
 
 void ArCleanup(void)
 {
-    if (opusDecoder != NULL) {
-        opus_multistream_decoder_destroy(opusDecoder);
-        opusDecoder = NULL;
-    }
     
     if (playerNode != nil) {
         @try {
@@ -300,12 +291,12 @@ void ArCleanup(void)
         audioEngine = nil;
     }
     
-    fromPcmFormat = nil;
+    inputOpusFormat = nil;
+    outputPcmFormat = nil;
     
     audioConverter = nil;
     
-    
-    atomic_store(&queuedFrames, 0);
+    atomic_store(&queuePackets, 0);
     
     // Deactivate session optionally (keep active for faster restart in some use-cases)
     // [[AVAudioSession sharedInstance] setActive:NO error:nil];
@@ -313,48 +304,42 @@ void ArCleanup(void)
 
 void ArDecodeAndPlaySample(char* sampleData, int sampleLength)
 {
-    int decodeLen;
-
+    if(sampleLength == 0){
+        return;
+    }
     // Don't queue if there's already more than 30 ms of audio data waiting
     if (LiGetPendingAudioDuration() > 30) {
         return;
     }
 
-    // Decode Opus into int16 interleaved buffer.
-    // decodeLen = frames per channel returned by opus_multistream_decode
-    // We allocate an input AVAudioPCMBuffer with the 'fromPcmFormat' (int16 interleaved)
-    // and then use AVAudioConverter to convert into float non-interleaved buffer.
-
-    // Frame capacity: use samplesPerFrame (frames per channel) as capacity
-    AVAudioFrameCount frameCapacity = (AVAudioFrameCount)audioConfig.samplesPerFrame;
-    AVAudioPCMBuffer *pcmIn = [[AVAudioPCMBuffer alloc] initWithPCMFormat:fromPcmFormat frameCapacity:frameCapacity];
-    if (pcmIn == nil) {
-        Log(LOG_E, @"Failed to create input AVAudioPCMBuffer");
+    AVAudioCompressedBuffer *opusCompressedBuffer = [[AVAudioCompressedBuffer alloc]
+            initWithFormat:inputOpusFormat
+            packetCapacity:1
+            maximumPacketSize:sampleLength];
+    if (!opusCompressedBuffer) {
+        Log(LOG_E, @"Failed to create AVAudioCompressedBuffer");
         return;
     }
-
-    // For interleaved int16, the interleaved data is at int16ChannelData[0]
-    int16_t * const dstInterleaved = pcmIn.int16ChannelData[0];
-    decodeLen = opus_multistream_decode(opusDecoder, (const unsigned char *)sampleData, sampleLength,
-                                        (opus_int16 *)dstInterleaved, audioConfig.samplesPerFrame, 0);
-    if (decodeLen <= 0) {
-        Log(LOG_E, @"opus_multistream_decode() return an error: %d", decodeLen);
-        return;
+    opusCompressedBuffer.packetCount = 1;
+    if (opusCompressedBuffer.packetDescriptions != NULL) {
+        opusCompressedBuffer.packetDescriptions[0].mStartOffset = 0;
+        opusCompressedBuffer.packetDescriptions[0].mDataByteSize = (UInt32)sampleLength;
+        opusCompressedBuffer.packetDescriptions[0].mVariableFramesInPacket = (UInt32)audioConfig.samplesPerFrame;
     }
+    
+    memcpy(opusCompressedBuffer.data, sampleData, sampleLength);
+    opusCompressedBuffer.byteLength = sampleLength;
 
-    pcmIn.frameLength = (AVAudioFrameCount)decodeLen;
-
-    // Convert to float non-interleaved
-    AVAudioPCMBuffer *pcmOut = [[AVAudioPCMBuffer alloc] initWithPCMFormat:toPcmFormat frameCapacity:pcmIn.frameLength];
+    AVAudioPCMBuffer *pcmOut = [[AVAudioPCMBuffer alloc] initWithPCMFormat:outputPcmFormat frameCapacity:audioConfig.samplesPerFrame];
     if (pcmOut == nil) {
         Log(LOG_E, @"Failed to create output AVAudioPCMBuffer");
         return;
     }
 
     NSError *convertError = nil;
-    AVAudioConverterInputBlock inputBlock = ^AVAudioBuffer * (AVAudioPacketCount inNumPackets, AVAudioConverterInputStatus *outStatus) {
+    AVAudioConverterInputBlock inputBlock = ^AVAudioBuffer* (AVAudioPacketCount inNumPackets, AVAudioConverterInputStatus *outStatus) {
         *outStatus = AVAudioConverterInputStatus_HaveData;
-        return pcmIn;
+        return opusCompressedBuffer;
     };
 
     AVAudioConverterOutputStatus status =  [audioConverter convertToBuffer:pcmOut error:&convertError withInputFromBlock:inputBlock];
@@ -365,15 +350,14 @@ void ArDecodeAndPlaySample(char* sampleData, int sampleLength)
     }
 
     // Backpressure: ensure we don't queue too many buffers locally
-    while ((atomic_load(&queuedFrames) / audioFrameSampleCount) > 10) {
+    while ((atomic_load(&queuePackets)) > 20) {
         usleep(1000);
     }
 
     // Schedule the converted buffer (float non-interleaved) on the player node
-    pcmOut.frameLength = pcmIn.frameLength;
-    atomic_fetch_add(&queuedFrames, (int)pcmOut.frameLength);
+    atomic_fetch_add(&queuePackets, 1);
     [playerNode scheduleBuffer:pcmOut completionHandler:^{
-        atomic_fetch_sub(&queuedFrames, (int)pcmOut.frameLength);
+        atomic_fetch_sub(&queuePackets, 1);
     }];
 }
 
