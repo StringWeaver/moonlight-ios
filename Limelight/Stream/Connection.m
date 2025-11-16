@@ -219,7 +219,7 @@ int ArInit(int audioConfiguration, POPUS_MULTISTREAM_CONFIGURATION opusConfig, v
     }
     // Create compressed Opus AVAudioFormat (kAudioFormatOpus)
     AudioStreamBasicDescription opusDesc = {
-        .mSampleRate       = opusConfig->sampleRate,
+        .mSampleRate       = (Float64)opusConfig->sampleRate,
         .mFormatID         = kAudioFormatOpus,
         .mFormatFlags      = 0,
         .mBytesPerPacket   = 0,
@@ -337,15 +337,24 @@ void ArDecodeAndPlaySample(char* sampleData, int sampleLength)
     }
 
     NSError *convertError = nil;
+    __block int8_t pendingPacket = 1;
     AVAudioConverterInputBlock inputBlock = ^AVAudioBuffer* (AVAudioPacketCount inNumPackets, AVAudioConverterInputStatus *outStatus) {
-        *outStatus = AVAudioConverterInputStatus_HaveData;
-        return opusCompressedBuffer;
+        if(pendingPacket > 0){
+            *outStatus = AVAudioConverterInputStatus_HaveData;
+            pendingPacket--;
+            return opusCompressedBuffer;
+        }else{
+            *outStatus = AVAudioConverterInputStatus_NoDataNow;
+            return nil;
+        }
     };
 
     AVAudioConverterOutputStatus status =  [audioConverter convertToBuffer:pcmOut error:&convertError withInputFromBlock:inputBlock];
 
-    if (status != AVAudioConverterOutputStatus_HaveData && status != AVAudioConverterOutputStatus_EndOfStream) {
+    if (status == AVAudioConverterOutputStatus_Error) {
         Log(LOG_E,@"[PcmPlayer] Audio conversion failed with status %ld error: %@", (long)status, convertError.localizedDescription);
+        return;
+    }else if(pcmOut.frameLength == 0){
         return;
     }
 

@@ -52,8 +52,7 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
    
     displayLayer.opaque = YES;
     displayLayer.magnificationFilter = kCAFilterNearest;
-    displayLayer.position = CGPointMake(CGRectGetMidX(_view.bounds), CGRectGetMidY(_view.bounds));
-    displayLayer.bounds = _view.bounds;
+    displayLayer.frame = _view.bounds;
     displayLayer.videoGravity = AVLayerVideoGravityResizeAspect;
 
     // Hide the layer until we get an IDR frame. This ensures we
