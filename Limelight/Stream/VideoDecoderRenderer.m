@@ -51,14 +51,14 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
     
    
     displayLayer.opaque = YES;
-    displayLayer.magnificationFilter = kCAFilterNearest;
+    displayLayer. magnificationFilter = kCAFilterLinear;
     displayLayer.frame = _view.bounds;
     displayLayer.videoGravity = AVLayerVideoGravityResizeAspect;
 
     // Hide the layer until we get an IDR frame. This ensures we
     // can see the loading progress label as the stream is starting.
     displayLayer.hidden = YES;
-    
+    displayLayer.contentsScale = [UIScreen mainScreen].scale;
     if (oldLayer != nil) {
         // Switch out the old display layer with the new one
         [_view.layer replaceSublayer:oldLayer with:displayLayer];
@@ -66,7 +66,7 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
     else {
         [_view.layer addSublayer:displayLayer];
     }
-    
+    NSLog(@"DisplayLayer Point w: %d, h: %d, scale: %.2f", (int)_view.layer.bounds.size.width, (int)_view.layer.bounds.size.height, _view.layer.contentsScale);
     if (formatDesc != nil) {
         CFRelease(formatDesc);
         formatDesc = nil;
