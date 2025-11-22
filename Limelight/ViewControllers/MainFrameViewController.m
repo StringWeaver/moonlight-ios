@@ -1437,4 +1437,10 @@ static NSMutableSet* hostList;
 #endif
 }
 
+- (void)viewDidLayoutSubviews {
+    [super viewDidLayoutSubviews];
+    UIView* view = self.view;
+    NSLog(@"MainFrameView Point w: %d, h: %d, scale: %.2f, traitCollection.DisplayScale: %.2f", (int)view.bounds.size.width, (int)view.bounds.size.height, view.contentScaleFactor, self.traitCollection.displayScale);
+}
+
 @end

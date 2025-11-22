@@ -44,33 +44,35 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
 
 - (void)reinitializeDisplayLayer
 {
-    CALayer *oldLayer = displayLayer;
-    
-    displayLayer = [[AVSampleBufferDisplayLayer alloc] init];
-    displayLayer.backgroundColor = [UIColor blackColor].CGColor;
-    
-   
-    displayLayer.opaque = YES;
-    displayLayer. magnificationFilter = kCAFilterLinear;
-    displayLayer.frame = _view.bounds;
-    displayLayer.videoGravity = AVLayerVideoGravityResizeAspect;
-
-    // Hide the layer until we get an IDR frame. This ensures we
-    // can see the loading progress label as the stream is starting.
-    displayLayer.hidden = YES;
-    displayLayer.contentsScale = [UIScreen mainScreen].scale;
-    if (oldLayer != nil) {
-        // Switch out the old display layer with the new one
-        [_view.layer replaceSublayer:oldLayer with:displayLayer];
-    }
-    else {
-        [_view.layer addSublayer:displayLayer];
-    }
-    NSLog(@"DisplayLayer Point w: %d, h: %d, scale: %.2f", (int)_view.layer.bounds.size.width, (int)_view.layer.bounds.size.height, _view.layer.contentsScale);
-    if (formatDesc != nil) {
-        CFRelease(formatDesc);
-        formatDesc = nil;
-    }
+    dispatch_async(dispatch_get_main_queue(), ^{
+        CALayer *oldLayer = self->displayLayer;
+        
+        self->displayLayer = [[AVSampleBufferDisplayLayer alloc] init];
+        self->displayLayer.backgroundColor = [UIColor blackColor].CGColor;
+        
+        
+        self->displayLayer.opaque = YES;
+        //displayLayer.magnificationFilter = kCAFilterNearest;
+        self->displayLayer.videoGravity = AVLayerVideoGravityResizeAspect;
+        
+        // Hide the layer until we get an IDR frame. This ensures we
+        // can see the loading progress label as the stream is starting.
+        self->displayLayer.hidden = YES;
+        //self->displayLayer.drawsAsynchronously = YES;
+        self->_view.displayLayer = self->displayLayer;
+        if (oldLayer != nil) {
+            // Switch out the old display layer with the new one
+            [self->_view.layer replaceSublayer:oldLayer with:self->displayLayer];
+        }
+        else {
+            [self->_view.layer addSublayer:self->displayLayer];
+        }
+        NSLog(@"DisplayLayer Point w: %d, h: %d, scale: %.2f", (int)self->_view.layer.bounds.size.width, (int)self->_view.layer.bounds.size.height, self->_view.layer.contentsScale);
+        if (self->formatDesc != nil) {
+            CFRelease(self->formatDesc);
+            self->formatDesc = nil;
+        }
+    });
 }
 
 - (id)initWithView:(StreamView*)view callbacks:(id<ConnectionCallbacks>)callbacks streamAspectRatio:(float)aspectRatio useFramePacing:(BOOL)useFramePacing

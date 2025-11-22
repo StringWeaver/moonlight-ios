@@ -10,6 +10,7 @@
 #import "OnScreenControls.h"
 #import "Moonlight-Swift.h"
 #import "StreamConfiguration.h"
+#import <AVFoundation/AVFoundation.h>
 
 @protocol UserInteractionDelegate <NSObject>
 
@@ -23,7 +24,7 @@
 #else
 @interface StreamView : UIView <X1KitMouseDelegate, UITextFieldDelegate, UIPointerInteractionDelegate>
 #endif
-
+@property (nonatomic, strong) AVSampleBufferDisplayLayer *displayLayer;
 - (void) setupStreamView:(ControllerSupport*)controllerSupport
      interactionDelegate:(id<UserInteractionDelegate>)interactionDelegate
                   config:(StreamConfiguration*)streamConfig;

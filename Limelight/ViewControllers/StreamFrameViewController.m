@@ -206,19 +206,19 @@
         // Add StreamView directly in relative mode
         [self.view addSubview:_streamView];
     }
+    _streamView.translatesAutoresizingMaskIntoConstraints = NO;
+    [NSLayoutConstraint activateConstraints:@[
+        [_streamView.topAnchor constraintEqualToAnchor:self.view.topAnchor],
+        [_streamView.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor],
+        [_streamView.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
+        [_streamView.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
+    ]];
     
     [self.view addSubview:_stageLabel];
     [self.view addSubview:_spinner];
     [self.view addSubview:_tipLabel];
 }
 
-- (void)viewWillTransitionToSize:(CGSize)size withTransitionCoordinator:(id<UIViewControllerTransitionCoordinator>)coordinator {
-    [super viewWillTransitionToSize:size withTransitionCoordinator:coordinator];
-    
-    [coordinator animateAlongsideTransition:^(id<UIViewControllerTransitionCoordinatorContext> context) {
-        [self returnToMainFrame];
-    } completion:nil];
-}
 
 - (UIView *)viewForZoomingInScrollView:(UIScrollView *)scrollView {
     return _streamView;
@@ -719,5 +719,8 @@
     return [GCMouse mice].count > 0;
 }
 #endif
-
+- (void)viewDidLayoutSubviews {
+    [super viewDidLayoutSubviews];
+    _streamView.displayLayer.frame = _streamView.bounds;
+}
 @end
