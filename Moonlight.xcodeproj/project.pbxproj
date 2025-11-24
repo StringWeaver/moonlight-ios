@@ -12,7 +12,7 @@
 		6AD1464A2EC9CA6500F3B066 /* Libavfilter in Frameworks */ = {isa = PBXBuildFile; productRef = 6AD146492EC9CA6500F3B066 /* Libavfilter */; };
 		6AD1464C2EC9CA6500F3B066 /* Libavformat in Frameworks */ = {isa = PBXBuildFile; productRef = 6AD1464B2EC9CA6500F3B066 /* Libavformat */; };
 		6AD1464E2EC9CA6500F3B066 /* Libavutil in Frameworks */ = {isa = PBXBuildFile; productRef = 6AD1464D2EC9CA6500F3B066 /* Libavutil */; };
-		6AD146582EC9CB6E00F3B066 /* FFmpegKit in Frameworks */ = {isa = PBXBuildFile; platformFilter = maccatalyst; productRef = 6AD146572EC9CB6E00F3B066 /* FFmpegKit */; };
+		6AD146582EC9CB6E00F3B066 /* FFmpegKit in Frameworks */ = {isa = PBXBuildFile; productRef = 6AD146572EC9CB6E00F3B066 /* FFmpegKit */; };
 		98181BED2791281100E43572 /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 98181BEC2791281100E43572 /* CoreMotion.framework */; };
 		9819CC14254F107A008A7C8E /* RelativeTouchHandler.m in Sources */ = {isa = PBXBuildFile; fileRef = 9819CC13254F107A008A7C8E /* RelativeTouchHandler.m */; };
 		9819CC1D254F1730008A7C8E /* RelativeTouchHandler.m in Sources */ = {isa = PBXBuildFile; fileRef = 9819CC13254F107A008A7C8E /* RelativeTouchHandler.m */; };
@@ -1148,6 +1148,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = S3JJX3QZ65;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
@@ -1206,6 +1207,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = S3JJX3QZ65;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;

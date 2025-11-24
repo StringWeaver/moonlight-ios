@@ -16,6 +16,7 @@
 
 - (void) userInteractionBegan;
 - (void) userInteractionEnded;
+- (void) edgeSwiped;
 
 @end
 
@@ -24,7 +25,6 @@
 #else
 @interface StreamView : UIView <X1KitMouseDelegate, UITextFieldDelegate, UIPointerInteractionDelegate>
 #endif
-@property (nonatomic, strong) AVSampleBufferDisplayLayer *displayLayer;
 - (void) setupStreamView:(ControllerSupport*)controllerSupport
      interactionDelegate:(id<UserInteractionDelegate>)interactionDelegate
                   config:(StreamConfiguration*)streamConfig;

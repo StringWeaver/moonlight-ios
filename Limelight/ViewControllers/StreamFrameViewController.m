@@ -719,8 +719,5 @@
     return [GCMouse mice].count > 0;
 }
 #endif
-- (void)viewDidLayoutSubviews {
-    [super viewDidLayoutSubviews];
-    _streamView.displayLayer.frame = _streamView.bounds;
-}
+
 @end

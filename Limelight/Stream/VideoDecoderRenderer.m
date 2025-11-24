@@ -44,35 +44,25 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
 
 - (void)reinitializeDisplayLayer
 {
-    dispatch_async(dispatch_get_main_queue(), ^{
-        CALayer *oldLayer = self->displayLayer;
-        
-        self->displayLayer = [[AVSampleBufferDisplayLayer alloc] init];
-        self->displayLayer.backgroundColor = [UIColor blackColor].CGColor;
-        
-        
-        self->displayLayer.opaque = YES;
-        //displayLayer.magnificationFilter = kCAFilterNearest;
-        self->displayLayer.videoGravity = AVLayerVideoGravityResizeAspect;
-        
-        // Hide the layer until we get an IDR frame. This ensures we
-        // can see the loading progress label as the stream is starting.
-        self->displayLayer.hidden = YES;
-        //self->displayLayer.drawsAsynchronously = YES;
-        self->_view.displayLayer = self->displayLayer;
-        if (oldLayer != nil) {
-            // Switch out the old display layer with the new one
-            [self->_view.layer replaceSublayer:oldLayer with:self->displayLayer];
-        }
-        else {
-            [self->_view.layer addSublayer:self->displayLayer];
-        }
-        NSLog(@"DisplayLayer Point w: %d, h: %d, scale: %.2f", (int)self->_view.layer.bounds.size.width, (int)self->_view.layer.bounds.size.height, self->_view.layer.contentsScale);
-        if (self->formatDesc != nil) {
-            CFRelease(self->formatDesc);
-            self->formatDesc = nil;
-        }
-    });
+    NSAssert([NSThread isMainThread], @"this method must be execute on main thread!");
+    
+    self->displayLayer.backgroundColor = [UIColor blackColor].CGColor;
+    
+    
+    //self->displayLayer.opaque = YES;
+    self->displayLayer.magnificationFilter = kCAFilterNearest;
+    self->displayLayer.videoGravity = AVLayerVideoGravityResizeAspect;
+    
+    // Hide the layer until we get an IDR frame. This ensures we
+    // can see the loading progress label as the stream is starting.
+    self->displayLayer.hidden = YES;
+    //self->displayLayer.drawsAsynchronously = YES;
+    
+    NSLog(@"DisplayLayer Point w: %d, h: %d, scale: %.2f", (int)self->_view.layer.bounds.size.width, (int)self->_view.layer.bounds.size.height, self->_view.layer.contentsScale);
+    if (self->formatDesc != nil) {
+        CFRelease(self->formatDesc);
+        self->formatDesc = nil;
+    }
 }
 
 - (id)initWithView:(StreamView*)view callbacks:(id<ConnectionCallbacks>)callbacks streamAspectRatio:(float)aspectRatio useFramePacing:(BOOL)useFramePacing
@@ -80,6 +70,8 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
     self = [super init];
     
     _view = view;
+    NSAssert(_view.layer && [_view.layer isKindOfClass:[AVSampleBufferDisplayLayer class]], @"_view.layer must be AVSampleBufferDisplayLayer");
+    displayLayer = (AVSampleBufferDisplayLayer *)_view.layer;
     _callbacks = callbacks;
     _streamAspectRatio = aspectRatio;
     framePacing = useFramePacing;
@@ -563,7 +555,13 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
         
         // Recreate the display layer. We are already on the main thread,
         // so this is safe to do right here.
-        [self reinitializeDisplayLayer];
+        if([NSThread isMainThread]){
+            [self reinitializeDisplayLayer];
+        }else{
+            dispatch_sync(dispatch_get_main_queue(), ^{
+                [self reinitializeDisplayLayer];
+            });
+        }
         
         // Request an IDR frame to initialize the new decoder
         free(data);
@@ -652,6 +650,9 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
         [_queueLock unlock];
     }
     else {
+        while(![self->displayLayer isReadyForMoreMediaData]){
+            usleep(1000);
+        }
         [self->displayLayer enqueueSampleBuffer:sampleBuffer];
         CFRelease(sampleBuffer);
     }
