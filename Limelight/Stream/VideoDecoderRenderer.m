@@ -36,8 +36,6 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
     CADisplayLink* _displayLink;
     BOOL framePacing;
     
-    NSLock *_queueLock;
-    NSMutableArray *_sampleBufferQueue;
     NSThread *_submitThread;
     BOOL _running;
 }
@@ -50,13 +48,12 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
     
     
     //self->displayLayer.opaque = YES;
-    self->displayLayer.magnificationFilter = kCAFilterNearest;
     self->displayLayer.videoGravity = AVLayerVideoGravityResizeAspect;
     
     // Hide the layer until we get an IDR frame. This ensures we
     // can see the loading progress label as the stream is starting.
     self->displayLayer.hidden = YES;
-    //self->displayLayer.drawsAsynchronously = YES;
+    self->displayLayer.drawsAsynchronously = framePacing;
     
     NSLog(@"DisplayLayer Point w: %d, h: %d, scale: %.2f", (int)self->_view.layer.bounds.size.width, (int)self->_view.layer.bounds.size.height, self->_view.layer.contentsScale);
     if (self->formatDesc != nil) {
@@ -79,9 +76,7 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
     parameterSetBuffers = [[NSMutableArray alloc] init];
     
     [self reinitializeDisplayLayer];
-    
-    _sampleBufferQueue = [[NSMutableArray alloc] init];
-    _queueLock = [[NSLock alloc] init];
+
     _running = NO;
     
     return self;
@@ -100,7 +95,7 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
     
     _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(displayLinkCallback:)];
     if (@available(iOS 15.0, tvOS 15.0, *)) {
-        _displayLink.preferredFrameRateRange = CAFrameRateRangeMake(self->frameRate, self->frameRate, self->frameRate);
+        _displayLink.preferredFrameRateRange = CAFrameRateRangeMake(1, self->frameRate, self->frameRate);
     }
     else {
         _displayLink.preferredFramesPerSecond = self->frameRate;
@@ -117,32 +112,7 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
 
 - (void)displayLinkCallback:(CADisplayLink *)sender
 {
-    if(!framePacing) {
-        return;
-    }
-    // Calculate the actual display refresh rate
-    double displayRefreshRate = 1 / (_displayLink.targetTimestamp - _displayLink.timestamp);
-    
-    // Only keep 1 buffer frame if the display refresh rate is >= 90% of our stream frame rate.
-    // Battery saver, accessibility settings, or device thermals can cause the actual
-    // refresh rate of the display to drop below the physical maximum.
-    NSUInteger bufferSize = 0;
-    if (displayRefreshRate >= frameRate * 0.9f) {
-        bufferSize = 1;
-    }
-    // Always try to pop one frame per refresh
-    [_queueLock lock];
-    do {
-        if(_sampleBufferQueue.count == 0) {
-            break;
-        }
-        
-        CMSampleBufferRef sampleBuffer = (__bridge CMSampleBufferRef)_sampleBufferQueue.firstObject;
-        [_sampleBufferQueue removeObjectAtIndex:0];
-        [self->displayLayer enqueueSampleBuffer:sampleBuffer];
-        CFRelease(sampleBuffer);
-    } while (_sampleBufferQueue.count > bufferSize); // If possible, keep 1 frame to avoid jittering.
-    [_queueLock unlock];
+    return;
 }
 
 - (void)decodeThreadMain {
@@ -167,13 +137,6 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
         [_submitThread cancel];
         _submitThread = nil;
     }
-    [_queueLock lock];
-    while (_sampleBufferQueue.count > 0) {
-        CMSampleBufferRef sampleBuffer = (__bridge CMSampleBufferRef)_sampleBufferQueue.firstObject;
-        [_sampleBufferQueue removeObjectAtIndex:0];
-        CFRelease(sampleBuffer);
-    }
-    [_queueLock unlock];
     if(_displayLink) {
         [_displayLink invalidate];
     }
@@ -644,18 +607,12 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
     }
 
     // Enqueue the next frame
-    if(framePacing) {
-        [_queueLock lock];
-        [_sampleBufferQueue addObject:(__bridge id)sampleBuffer];
-        [_queueLock unlock];
+    while(![self->displayLayer isReadyForMoreMediaData]){
+        usleep(1000);
     }
-    else {
-        while(![self->displayLayer isReadyForMoreMediaData]){
-            usleep(1000);
-        }
-        [self->displayLayer enqueueSampleBuffer:sampleBuffer];
-        CFRelease(sampleBuffer);
-    }
+    [self->displayLayer enqueueSampleBuffer:sampleBuffer];
+    CFRelease(sampleBuffer);
+
     if (du->frameType == FRAME_TYPE_IDR && self->displayLayer.hidden == YES) {
         dispatch_async(dispatch_get_main_queue(), ^{
             self->displayLayer.hidden = NO;
