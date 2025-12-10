@@ -40,6 +40,20 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
     BOOL _running;
 }
 
+static void ApplyMagFilterToLayer(CALayer *layer) {
+    if (!layer) return;
+    layer.magnificationFilter = kCAFilterNearest;
+    for (CALayer *sublayer in layer.sublayers) {
+        ApplyMagFilterToLayer(sublayer);
+    }
+}
+
+static void ApplyMagFilterToSuperViews(UIView *view) {
+    if(!view) return;
+    ApplyMagFilterToLayer(view.layer);
+    ApplyMagFilterToSuperViews(view.superview);
+
+}
 - (void)reinitializeDisplayLayer
 {
     NSAssert([NSThread isMainThread], @"this method must be execute on main thread!");
@@ -48,14 +62,15 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
     
     
     //self->displayLayer.opaque = YES;
+    ApplyMagFilterToSuperViews(_view);
     self->displayLayer.videoGravity = AVLayerVideoGravityResizeAspect;
     
     // Hide the layer until we get an IDR frame. This ensures we
     // can see the loading progress label as the stream is starting.
     self->displayLayer.hidden = YES;
     self->displayLayer.drawsAsynchronously = framePacing;
-    
-    NSLog(@"DisplayLayer Point w: %d, h: %d, scale: %.2f", (int)self->_view.layer.bounds.size.width, (int)self->_view.layer.bounds.size.height, self->_view.layer.contentsScale);
+    _view.contentScaleFactor  = _view.traitCollection.displayScale;
+    NSLog(@"DisplayLayer Point w: %d, h: %d, traitCollection.displayScale:%.2f, view.contentScaleFactor:%.2f, layer.scale: %.2f, ", (int)self->_view.layer.bounds.size.width, (int)self->_view.layer.bounds.size.height, _view.traitCollection.displayScale,_view.contentScaleFactor,_view.layer.contentsScale);
     if (self->formatDesc != nil) {
         CFRelease(self->formatDesc);
         self->formatDesc = nil;
