@@ -40,18 +40,27 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
     BOOL _running;
 }
 
-static void ApplyMagFilterToLayer(CALayer *layer) {
+static void ApplyMagFilterToLayer(CALayer *layer, bool async) {
     if (!layer) return;
     layer.magnificationFilter = kCAFilterNearest;
+    layer.drawsAsynchronously = async;
     for (CALayer *sublayer in layer.sublayers) {
-        ApplyMagFilterToLayer(sublayer);
+        ApplyMagFilterToLayer(sublayer, async);
+    }
+}
+static void ApplyMagFilterToSubViews(UIView *view, bool async) {
+    if(!view) return;
+    ApplyMagFilterToLayer(view.layer, async);
+    for (UIView *sub in view.subviews) {
+        ApplyMagFilterToSubViews(sub, async);
     }
 }
 
-static void ApplyMagFilterToSuperViews(UIView *view) {
+static void ApplyMagFilterToSuperViews(UIView *view, bool async) {
     if(!view) return;
-    ApplyMagFilterToLayer(view.layer);
-    ApplyMagFilterToSuperViews(view.superview);
+    view.contentScaleFactor = view.traitCollection.displayScale;
+    ApplyMagFilterToLayer(view.layer, async);
+    ApplyMagFilterToSuperViews(view.superview, async);
 
 }
 - (void)reinitializeDisplayLayer
@@ -59,18 +68,17 @@ static void ApplyMagFilterToSuperViews(UIView *view) {
     NSAssert([NSThread isMainThread], @"this method must be execute on main thread!");
     
     self->displayLayer.backgroundColor = [UIColor blackColor].CGColor;
-    
-    
-    //self->displayLayer.opaque = YES;
-    ApplyMagFilterToSuperViews(_view);
     self->displayLayer.videoGravity = AVLayerVideoGravityResizeAspect;
     
     // Hide the layer until we get an IDR frame. This ensures we
     // can see the loading progress label as the stream is starting.
     self->displayLayer.hidden = YES;
-    self->displayLayer.drawsAsynchronously = framePacing;
-    _view.contentScaleFactor  = _view.traitCollection.displayScale;
-    NSLog(@"DisplayLayer Point w: %d, h: %d, traitCollection.displayScale:%.2f, view.contentScaleFactor:%.2f, layer.scale: %.2f, ", (int)self->_view.layer.bounds.size.width, (int)self->_view.layer.bounds.size.height, _view.traitCollection.displayScale,_view.contentScaleFactor,_view.layer.contentsScale);
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        ApplyMagFilterToSubViews(self->_view, false);
+        ApplyMagFilterToSuperViews(self->_view, self->framePacing);
+        NSLog(@"DisplayLayer Point w: %d, h: %d, traitCollection.displayScale:%.2f, view.contentScaleFactor:%.2f, layer.scale: %.2f, ", (int)self->_view.layer.bounds.size.width, (int)self->_view.layer.bounds.size.height, self->_view.traitCollection.displayScale,self->_view.contentScaleFactor,self->_view.layer.contentsScale);
+    });
+    
     if (self->formatDesc != nil) {
         CFRelease(self->formatDesc);
         self->formatDesc = nil;
