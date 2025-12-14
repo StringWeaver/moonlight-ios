@@ -192,16 +192,25 @@ int ArInit(int audioConfiguration, POPUS_MULTISTREAM_CONFIGURATION opusConfig, v
 {
     
     // Prepare AVAudioSession
-    NSError *sessionError = nil;
+    NSError *error = nil;
+    // Audio Session
     AVAudioSession *session = [AVAudioSession sharedInstance];
-    BOOL ok = [session setCategory:AVAudioSessionCategoryPlayback
-                      withOptions:AVAudioSessionCategoryOptionMixWithOthers
-                            error:&sessionError];
-    if (!ok) {
-        Log(LOG_E, @"Failed to set AVAudioSession category: %@", sessionError);
+    if (![session setCategory:AVAudioSessionCategoryPlayback
+                  withOptions:AVAudioSessionCategoryOptionMixWithOthers
+                        error:&error]) {
+        Log(LOG_E, @"Failed to set audio session: %@", error);
         return -1;
     }
-    [session setActive:YES error:nil];
+    double preferredRate = opusConfig->sampleRate;
+    if (![session setPreferredSampleRate:preferredRate error:&error]) {
+        Log(LOG_E, @"Failed to set preferred sample rate: %@", error);
+        return -1;
+    }
+
+    if (![session setActive:YES error:&error]) {
+        Log(LOG_E, @"Failed to activate audio session: %@", error);
+        return -1;
+    }
     
     // Create engine and player node
     audioEngine = [[AVAudioEngine alloc] init];
