@@ -40,31 +40,7 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
     BOOL _running;
 }
 
-static void ApplyMagFilterToLayer(CALayer *layer, bool async) {
-    if (!layer) return;
-    layer.magnificationFilter = kCAFilterNearest; // linear filter is a bit blurry
-    if(async) { // don't change default value of other layers if we decide not to use async
-        layer.drawsAsynchronously = YES;
-    }
-    for (CALayer *sublayer in layer.sublayers) {
-        ApplyMagFilterToLayer(sublayer, async);
-    }
-}
-static void ApplyMagFilterToSubViews(UIView *view, bool async) {
-    if(!view) return;
-    ApplyMagFilterToLayer(view.layer, async);
-    for (UIView *sub in view.subviews) {
-        ApplyMagFilterToSubViews(sub, async);
-    }
-}
 
-static void ApplyMagFilterToSuperViews(UIView *view, bool async) {
-    if(!view) return;
-    view.contentScaleFactor = view.traitCollection.displayScale;
-    ApplyMagFilterToLayer(view.layer, async);
-    ApplyMagFilterToSuperViews(view.superview, async);
-
-}
 - (void)reinitializeDisplayLayer
 {
     NSAssert([NSThread isMainThread], @"this method must be execute on main thread!");
@@ -76,8 +52,6 @@ static void ApplyMagFilterToSuperViews(UIView *view, bool async) {
     // can see the loading progress label as the stream is starting.
     self->displayLayer.hidden = YES;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        ApplyMagFilterToSubViews(self->_view, self->framePacing);
-        ApplyMagFilterToSuperViews(self->_view, self->framePacing);
         NSLog(@"DisplayLayer Point w: %d, h: %d, traitCollection.displayScale:%.2f, view.contentScaleFactor:%.2f, layer.scale: %.2f, ", (int)self->_view.layer.bounds.size.width, (int)self->_view.layer.bounds.size.height, self->_view.traitCollection.displayScale,self->_view.contentScaleFactor,self->_view.layer.contentsScale);
     });
     
