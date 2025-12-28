@@ -61,6 +61,11 @@ void DrStart(void)
     [renderer start];
 }
 
+void DrStartForPushMode(void)
+{
+    [renderer startForPushMode];
+}
+
 void DrStop(void)
 {
     [renderer stop];
@@ -541,11 +546,26 @@ void ClSetControllerLED(uint16_t controllerNumber, uint8_t r, uint8_t g, uint8_t
 
     LiInitializeVideoCallbacks(&_drCallbacks);
     _drCallbacks.setup = DrDecoderSetup;
-    _drCallbacks.start = DrStart;
+    
     _drCallbacks.stop = DrStop;
-    _drCallbacks.capabilities = CAPABILITY_PULL_RENDERER |
-                                CAPABILITY_REFERENCE_FRAME_INVALIDATION_HEVC |
+    _drCallbacks.capabilities = CAPABILITY_REFERENCE_FRAME_INVALIDATION_HEVC |
                                 CAPABILITY_REFERENCE_FRAME_INVALIDATION_AV1;
+    switch (config.videoRendererMode) {
+        case VideoRendererModeDirectPush:
+            _drCallbacks.capabilities |= CAPABILITY_DIRECT_SUBMIT;
+            // intentional fallthrough
+        case VideoRendererModePush:
+            _drCallbacks.start = DrStartForPushMode;
+            _drCallbacks.submitDecodeUnit = DrSubmitDecodeUnit;
+            break;
+        case VideoRendererModePull:
+            _drCallbacks.capabilities |= CAPABILITY_PULL_RENDERER;
+            _drCallbacks.start = DrStart;
+            break;
+        default:
+            NSAssert(false, @"invalid videoRendererMode");
+            break;
+    }
 
     LiInitializeAudioCallbacks(&_arCallbacks);
     _arCallbacks.init = ArInit;

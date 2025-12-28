@@ -5,7 +5,7 @@
 //  Created by Diego Waxemberg on 10/20/14.
 //  Copyright (c) 2014 Moonlight Stream. All rights reserved.
 //
-
+#import "TemporarySettings.h"
 @interface StreamConfiguration : NSObject
 
 @property NSString* host;
@@ -31,5 +31,6 @@
 @property BOOL multiController;
 @property BOOL useFramePacing;
 @property NSData* serverCert;
+@property VideoRendererMode videoRendererMode;
 
 @end

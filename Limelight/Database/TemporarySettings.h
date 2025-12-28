@@ -8,6 +8,12 @@
 
 #import "Settings+CoreDataClass.h"
 
+typedef NS_ENUM(int16_t, VideoRendererMode) {
+    VideoRendererModeDirectPush = 0,
+    VideoRendererModePush = 1,
+    VideoRendererModePull = 2,
+};
+
 @interface TemporarySettings : NSObject
 
 @property (nonatomic, retain) Settings * parent;
@@ -34,6 +40,7 @@
 @property (nonatomic) BOOL btMouseSupport;
 @property (nonatomic) BOOL absoluteTouchMode;
 @property (nonatomic) BOOL statsOverlay;
+@property (nonatomic) VideoRendererMode videoRendererMode;
 
 - (id) initFromSettings:(Settings*)settings;
 

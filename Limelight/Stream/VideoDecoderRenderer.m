@@ -41,13 +41,13 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
 {
     NSAssert(_view.layer && [_view.layer isKindOfClass:[AVSampleBufferDisplayLayer class]], @"_view.layer must be AVSampleBufferDisplayLayer");
     displayLayer = (AVSampleBufferDisplayLayer *)_view.layer;
-
+    
     displayLayer.backgroundColor = [UIColor blackColor].CGColor;
     
     displayLayer.videoGravity = AVLayerVideoGravityResizeAspect;
-
-    // Hide the layer until we get an IDR frame. This ensures we
-    // can see the loading progress label as the stream is starting.
+    
+        // Hide the layer until we get an IDR frame. This ensures we
+        // can see the loading progress label as the stream is starting.
     displayLayer.hidden = YES;
     
     
@@ -81,6 +81,17 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
     self->videoFormat = videoFormat;
     self->frameRate = frameRate;
 }
+- (void)startForPushMode
+{
+    _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(emptyDisplayLinkCallback:)];
+    if (@available(iOS 15.0, tvOS 15.0, *)) {
+        _displayLink.preferredFrameRateRange = CAFrameRateRangeMake(60, self->frameRate, self->frameRate);
+    }
+    else {
+        _displayLink.preferredFramesPerSecond = self->frameRate;
+    }
+    [_displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
+}
 
 - (void)start
 {
@@ -96,6 +107,11 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
 
 // TODO: Refactor this
 int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
+
+- (void)emptyDisplayLinkCallback:(CADisplayLink *)sender
+{
+    
+}
 
 - (void)displayLinkCallback:(CADisplayLink *)sender
 {
@@ -591,18 +607,19 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
             // I-frame
         CFDictionarySetValue(dict, kCMSampleAttachmentKey_NotSync, kCFBooleanFalse);
         CFDictionarySetValue(dict, kCMSampleAttachmentKey_DependsOnOthers, kCFBooleanFalse);
-        CFDictionarySetValue(dict, kCMSampleAttachmentKey_IsDependedOnByOthers, kCFBooleanTrue);
     }
 
     // Enqueue the next frame
     [self->displayLayer enqueueSampleBuffer:sampleBuffer];
     
-    if (du->frameType == FRAME_TYPE_IDR) {
-        // Ensure the layer is visible now
-        self->displayLayer.hidden = NO;
-        
-        // Tell our parent VC to hide the progress indicator
-        [self->_callbacks videoContentShown];
+    if (du->frameType == FRAME_TYPE_IDR && self->displayLayer.hidden == YES) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            // Ensure the layer is visible now
+            self->displayLayer.hidden = NO;
+            
+            // Tell our parent VC to hide the progress indicator
+            [self->_callbacks videoContentShown];
+        });
     }
     
     // Dereference the buffers

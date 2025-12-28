@@ -366,9 +366,9 @@
         [_inactivityTimer invalidate];
         _inactivityTimer = nil;
     }
-#endif
     
     [self returnToMainFrame];
+#endif
 }
 
 - (void)edgeSwiped {
