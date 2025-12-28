@@ -331,9 +331,9 @@
     }
     
 #if !TARGET_OS_TV
-    // Terminate the stream if the app is inactive for 60 seconds
+    // Terminate the stream if the app is inactive for 300 seconds
     Log(LOG_I, @"Starting inactivity termination timer");
-    _inactivityTimer = [NSTimer scheduledTimerWithTimeInterval:60
+    _inactivityTimer = [NSTimer scheduledTimerWithTimeInterval:300
                                                       target:self
                                                     selector:@selector(inactiveTimerExpired:)
                                                     userInfo:nil
@@ -361,11 +361,12 @@
 // This fires when the home button is pressed
 - (void)applicationDidEnterBackground:(UIApplication *)application {
     Log(LOG_I, @"Terminating stream immediately for backgrounding");
-
+#if !TARGET_OS_MACCATALYST
     if (_inactivityTimer != nil) {
         [_inactivityTimer invalidate];
         _inactivityTimer = nil;
     }
+#endif
     
     [self returnToMainFrame];
 }

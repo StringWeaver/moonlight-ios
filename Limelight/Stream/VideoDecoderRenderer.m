@@ -35,30 +35,29 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
     
     CADisplayLink* _displayLink;
     BOOL framePacing;
-    
-    NSThread *_submitThread;
-    BOOL _running;
 }
-
 
 - (void)reinitializeDisplayLayer
 {
-    NSAssert([NSThread isMainThread], @"this method must be execute on main thread!");
+    NSAssert(_view.layer && [_view.layer isKindOfClass:[AVSampleBufferDisplayLayer class]], @"_view.layer must be AVSampleBufferDisplayLayer");
+    displayLayer = (AVSampleBufferDisplayLayer *)_view.layer;
+
+    displayLayer.backgroundColor = [UIColor blackColor].CGColor;
     
-    self->displayLayer.backgroundColor = [UIColor blackColor].CGColor;
-    self->displayLayer.videoGravity = AVLayerVideoGravityResizeAspect;
-    
+    displayLayer.videoGravity = AVLayerVideoGravityResizeAspect;
+
     // Hide the layer until we get an IDR frame. This ensures we
     // can see the loading progress label as the stream is starting.
-    self->displayLayer.hidden = YES;
+    displayLayer.hidden = YES;
+    
+    
+    if (formatDesc != nil) {
+        CFRelease(formatDesc);
+        formatDesc = nil;
+    }
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         NSLog(@"DisplayLayer Point w: %d, h: %d, traitCollection.displayScale:%.2f, view.contentScaleFactor:%.2f, layer.scale: %.2f, ", (int)self->_view.layer.bounds.size.width, (int)self->_view.layer.bounds.size.height, self->_view.traitCollection.displayScale,self->_view.contentScaleFactor,self->_view.layer.contentsScale);
     });
-    
-    if (self->formatDesc != nil) {
-        CFRelease(self->formatDesc);
-        self->formatDesc = nil;
-    }
 }
 
 - (id)initWithView:(StreamView*)view callbacks:(id<ConnectionCallbacks>)callbacks streamAspectRatio:(float)aspectRatio useFramePacing:(BOOL)useFramePacing
@@ -66,8 +65,6 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
     self = [super init];
     
     _view = view;
-    NSAssert(_view.layer && [_view.layer isKindOfClass:[AVSampleBufferDisplayLayer class]], @"_view.layer must be AVSampleBufferDisplayLayer");
-    displayLayer = (AVSampleBufferDisplayLayer *)_view.layer;
     _callbacks = callbacks;
     _streamAspectRatio = aspectRatio;
     framePacing = useFramePacing;
@@ -75,8 +72,6 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
     parameterSetBuffers = [[NSMutableArray alloc] init];
     
     [self reinitializeDisplayLayer];
-
-    _running = NO;
     
     return self;
 }
@@ -89,9 +84,6 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
 
 - (void)start
 {
-    if (_running) return;
-    _running = YES;
-    
     _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(displayLinkCallback:)];
     if (@available(iOS 15.0, tvOS 15.0, *)) {
         _displayLink.preferredFrameRateRange = CAFrameRateRangeMake(1, self->frameRate, self->frameRate);
@@ -100,10 +92,6 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
         _displayLink.preferredFramesPerSecond = self->frameRate;
     }
     [_displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
-
-    _submitThread = [[NSThread alloc] initWithTarget:self selector:@selector(decodeThreadMain) object:nil];
-    [_submitThread setQualityOfService:NSQualityOfServiceUserInteractive];
-    [_submitThread start];
 }
 
 // TODO: Refactor this
@@ -111,34 +99,33 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
 
 - (void)displayLinkCallback:(CADisplayLink *)sender
 {
-    return;
-}
-
-- (void)decodeThreadMain {
-    
     VIDEO_FRAME_HANDLE handle;
     PDECODE_UNIT du;
-    while (_running && ![[NSThread currentThread] isCancelled]) {
-        @autoreleasepool {
-            if(!LiWaitForNextVideoFrame(&handle,&du)) {
-                continue;
+    
+    while (LiPollNextVideoFrame(&handle, &du)) {
+        LiCompleteVideoFrame(handle, DrSubmitDecodeUnit(du));
+        
+        if (framePacing) {
+            // Calculate the actual display refresh rate
+            double displayRefreshRate = 1 / (_displayLink.targetTimestamp - _displayLink.timestamp);
+            
+            // Only pace frames if the display refresh rate is >= 90% of our stream frame rate.
+            // Battery saver, accessibility settings, or device thermals can cause the actual
+            // refresh rate of the display to drop below the physical maximum.
+            if (displayRefreshRate >= frameRate * 0.9f) {
+                // Keep one pending frame to smooth out gaps due to
+                // network jitter at the cost of 1 frame of latency
+                if (LiGetPendingVideoFrames() == 1) {
+                    break;
+                }
             }
-            LiCompleteVideoFrame(handle, DrSubmitDecodeUnit(du));
         }
     }
 }
 
 - (void)stop
 {
-    if (!_running) return;
-    _running = NO;
-    if (_submitThread) {
-        [_submitThread cancel];
-        _submitThread = nil;
-    }
-    if(_displayLink) {
-        [_displayLink invalidate];
-    }
+    [_displayLink invalidate];
 }
 
 #define NALU_START_PREFIX_SIZE 3
@@ -517,13 +504,7 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
         
         // Recreate the display layer. We are already on the main thread,
         // so this is safe to do right here.
-        if([NSThread isMainThread]){
-            [self reinitializeDisplayLayer];
-        }else{
-            dispatch_sync(dispatch_get_main_queue(), ^{
-                [self reinitializeDisplayLayer];
-            });
-        }
+        [self reinitializeDisplayLayer];
         
         // Request an IDR frame to initialize the new decoder
         free(data);
@@ -589,40 +570,45 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
                                   formatDesc, 1, 1,
                                   &sampleTiming, 0, NULL,
                                   &sampleBuffer);
-    
-    CFArrayRef attachmentsArray = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, YES);
-    if (attachmentsArray && CFArrayGetCount(attachmentsArray) > 0) {
-        CFMutableDictionaryRef attachments = (CFMutableDictionaryRef)CFArrayGetValueAtIndex(attachmentsArray, 0);
-        if (attachments) {
-            // sunshine don't use B-frames, hint decoder about this.
-            CFDictionarySetValue(attachments, kCMSampleAttachmentKey_EarlierDisplayTimesAllowed, kCFBooleanFalse);
-            CFDictionarySetValue(attachments, kCMSampleAttachmentKey_DisplayImmediately, kCFBooleanTrue);
-        }
-    }
     if (status != noErr) {
         Log(LOG_E, @"CMSampleBufferCreate failed: %d", (int)status);
         CFRelease(dataBlockBuffer);
         CFRelease(frameBlockBuffer);
         return DR_NEED_IDR;
     }
+    CFArrayRef attachments = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, YES);
+    CFMutableDictionaryRef dict = (CFMutableDictionaryRef)CFArrayGetValueAtIndex(attachments, 0);
+    
+    CFDictionarySetValue(dict, kCMSampleAttachmentKey_DisplayImmediately, self->framePacing ? kCFBooleanFalse : kCFBooleanTrue);
+    CFDictionarySetValue(dict, kCMSampleAttachmentKey_EarlierDisplayTimesAllowed, kCFBooleanFalse);
+        // leaving kCMSampleAttachmentKey_IsDependedOnByOthers to unknown reduce latency
+    
+    if (du->frameType == FRAME_TYPE_PFRAME) {
+            // P-frame
+        CFDictionarySetValue(dict, kCMSampleAttachmentKey_NotSync, kCFBooleanTrue);
+        CFDictionarySetValue(dict, kCMSampleAttachmentKey_DependsOnOthers, kCFBooleanTrue);
+    } else {
+            // I-frame
+        CFDictionarySetValue(dict, kCMSampleAttachmentKey_NotSync, kCFBooleanFalse);
+        CFDictionarySetValue(dict, kCMSampleAttachmentKey_DependsOnOthers, kCFBooleanFalse);
+        CFDictionarySetValue(dict, kCMSampleAttachmentKey_IsDependedOnByOthers, kCFBooleanTrue);
+    }
 
     // Enqueue the next frame
-    while(![self->displayLayer isReadyForMoreMediaData]){
-        usleep(1000);
-    }
     [self->displayLayer enqueueSampleBuffer:sampleBuffer];
-    CFRelease(sampleBuffer);
-
-    if (du->frameType == FRAME_TYPE_IDR && self->displayLayer.hidden == YES) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            self->displayLayer.hidden = NO;
-            [self->_callbacks videoContentShown];
-        });
+    
+    if (du->frameType == FRAME_TYPE_IDR) {
+        // Ensure the layer is visible now
+        self->displayLayer.hidden = NO;
+        
+        // Tell our parent VC to hide the progress indicator
+        [self->_callbacks videoContentShown];
     }
     
     // Dereference the buffers
     CFRelease(dataBlockBuffer);
     CFRelease(frameBlockBuffer);
+    CFRelease(sampleBuffer);
     
     return DR_OK;
 }
