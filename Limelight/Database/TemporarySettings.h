@@ -41,6 +41,7 @@ typedef NS_ENUM(int16_t, VideoRendererMode) {
 @property (nonatomic) BOOL absoluteTouchMode;
 @property (nonatomic) BOOL statsOverlay;
 @property (nonatomic) VideoRendererMode videoRendererMode;
+@property (nonatomic) float framePacingDelayInMs;
 
 - (id) initFromSettings:(Settings*)settings;
 

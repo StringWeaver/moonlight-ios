@@ -27,6 +27,9 @@
 @property (strong, nonatomic) IBOutlet UISegmentedControl *btMouseSelector;
 @property (strong, nonatomic) IBOutlet UISegmentedControl *statsOverlaySelector;
 @property (strong, nonatomic) IBOutlet UISegmentedControl *videoRendererModeSelector;
+@property (strong, nonatomic) IBOutlet UILabel *framePacingDelayLabel;
+@property (strong, nonatomic) IBOutlet UISlider *framePacingDelaySlider;
+
 @property (strong, nonatomic) IBOutlet UIScrollView *scrollView;
 
 #pragma clang diagnostic push

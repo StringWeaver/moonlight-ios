@@ -640,6 +640,7 @@ static NSMutableSet* hostList;
     _streamConfig.useFramePacing = streamSettings.useFramePacing;
     _streamConfig.swapABXYButtons = streamSettings.swapABXYButtons;
     _streamConfig.videoRendererMode = streamSettings.videoRendererMode;
+    _streamConfig.framePacingDelayInMs = streamSettings.framePacingDelayInMs;
     
     // multiController must be set before calling getConnectedGamepadMask
     _streamConfig.multiController = streamSettings.multiController;

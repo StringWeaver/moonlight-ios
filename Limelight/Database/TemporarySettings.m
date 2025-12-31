@@ -45,7 +45,8 @@
     self.swapABXYButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"swapABXYButtons"];
     self.btMouseSupport = [[NSUserDefaults standardUserDefaults] boolForKey:@"btMouseSupport"];
     self.statsOverlay = [[NSUserDefaults standardUserDefaults] boolForKey:@"statsOverlay"];
-    self.videoRendererMode = [[NSUserDefaults standardUserDefaults] boolForKey:@"videoRendererMode"];
+    self.videoRendererMode = [[NSUserDefaults standardUserDefaults] integerForKey:@"videoRendererMode"];
+    self.framePacingDelayInMs = [[NSUserDefaults standardUserDefaults] floatForKey:@"framePacingDelayInMs"];
     
     NSInteger _screenSize = [[NSUserDefaults standardUserDefaults] integerForKey:@"streamResolution"];
     switch (_screenSize) {
@@ -87,6 +88,7 @@
     self.absoluteTouchMode = settings.absoluteTouchMode;
     self.statsOverlay = settings.statsOverlay;
     self.videoRendererMode = settings.videoRendererMode;
+    self.framePacingDelayInMs = settings.framePacingDelayInMs;
 #endif
     self.uniqueId = settings.uniqueId;
     

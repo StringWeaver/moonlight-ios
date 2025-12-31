@@ -54,6 +54,12 @@ const int RESOLUTION_TABLE_SIZE = 7;
 const int RESOLUTION_TABLE_CUSTOM_INDEX = RESOLUTION_TABLE_SIZE - 1;
 CGSize resolutionTable[RESOLUTION_TABLE_SIZE];
 
+
+- (void)framePacingDelaySliderChanged:(UISlider *)sender {
+    self.framePacingDelaySlider.value = sender.value;
+    self.framePacingDelayLabel.text = [NSString stringWithFormat:@"Frame Pacing Delay Time: %.0f ms", sender.value];
+}
+
 -(int)getSliderValueForBitrate:(NSInteger)bitrate {
     int i;
     
@@ -262,6 +268,9 @@ BOOL isCustomResolution(CGSize res) {
     [self.bitrateSlider setMaximumValue:(sizeof(bitrateTable) / sizeof(*bitrateTable)) - 1];
     [self.bitrateSlider setValue:[self getSliderValueForBitrate:_bitrate] animated:YES];
     [self.bitrateSlider addTarget:self action:@selector(bitrateSliderMoved) forControlEvents:UIControlEventValueChanged];
+    [self.framePacingDelaySlider setValue:currentSettings.framePacingDelayInMs];
+    [self.framePacingDelaySlider addTarget:self action:@selector(framePacingDelaySliderChanged:) forControlEvents:UIControlEventValueChanged];
+    [self framePacingDelaySliderChanged:_framePacingDelaySlider];
     [self updateBitrateText];
     [self updateResolutionDisplayViewText];
 }
@@ -540,6 +549,7 @@ BOOL isCustomResolution(CGSize res) {
     BOOL statsOverlay = [self.statsOverlaySelector selectedSegmentIndex] == 1;
     BOOL enableHdr = [self.hdrSelector selectedSegmentIndex] == 1;
     VideoRendererMode videoRendererMode = [self.videoRendererModeSelector selectedSegmentIndex];
+    float framePacingDelayInMs = self.framePacingDelaySlider.value;
     [dataMan saveSettingsWithBitrate:_bitrate
                            framerate:framerate
                               height:height
@@ -556,7 +566,8 @@ BOOL isCustomResolution(CGSize res) {
                       btMouseSupport:btMouseSupport
                    absoluteTouchMode:absoluteTouchMode
                         statsOverlay:statsOverlay
-                        videoRendererMode:videoRendererMode];
+                        videoRendererMode:videoRendererMode
+                        framePacingDelayInMs:framePacingDelayInMs];
 }
 
 - (void)didReceiveMemoryWarning {

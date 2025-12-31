@@ -18,6 +18,10 @@
 // Private libavformat API for writing the AV1 Codec Configuration Box
 extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
                               int write_seq_header);
+typedef struct {
+    BOOL   hasValue;
+    Float64 value;
+} ExpAvgValue;
 
 @implementation VideoDecoderRenderer {
     StreamView* _view;
@@ -35,6 +39,8 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
     
     CADisplayLink* _displayLink;
     BOOL framePacing;
+    float framePacingDelayInMs;
+    ExpAvgValue avgDeltaTime;
 }
 
 - (void)reinitializeDisplayLayer
@@ -60,16 +66,19 @@ extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
     });
 }
 
-- (id)initWithView:(StreamView*)view callbacks:(id<ConnectionCallbacks>)callbacks streamAspectRatio:(float)aspectRatio useFramePacing:(BOOL)useFramePacing
+- (id)initWithView:(StreamView*)view callbacks:(id<ConnectionCallbacks>)callbacks streamConfig:(StreamConfiguration*)config
 {
     self = [super init];
     
     _view = view;
     _callbacks = callbacks;
-    _streamAspectRatio = aspectRatio;
-    framePacing = useFramePacing;
+    _streamAspectRatio = (float)config.width / (float)config.height;
+    framePacing = config.useFramePacing;
+    framePacingDelayInMs = config.framePacingDelayInMs;
     
     parameterSetBuffers = [[NSMutableArray alloc] init];
+    
+    avgDeltaTime.hasValue = NO;
     
     [self reinitializeDisplayLayer];
     
@@ -579,12 +588,12 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
         
     CMSampleBufferRef sampleBuffer;
     
-    CMSampleTimingInfo sampleTiming = {kCMTimeInvalid, CMTimeMake(du->presentationTimeMs, 1000), kCMTimeInvalid};
-    
+    CMSampleTimingInfo sampleTiming = {kCMTimeInvalid, CMTimeMakeWithSeconds(du->presentationTimeMs / 1000.0, USEC_PER_SEC), kCMTimeInvalid};
+    size_t sampleSize = CMBlockBufferGetDataLength(frameBlockBuffer);
     status = CMSampleBufferCreateReady(kCFAllocatorDefault,
                                   frameBlockBuffer,
                                   formatDesc, 1, 1,
-                                  &sampleTiming, 0, NULL,
+                                  &sampleTiming, 1, &sampleSize,
                                   &sampleBuffer);
     if (status != noErr) {
         Log(LOG_E, @"CMSampleBufferCreate failed: %d", (int)status);
@@ -592,21 +601,39 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
         CFRelease(frameBlockBuffer);
         return DR_NEED_IDR;
     }
-    CFArrayRef attachments = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, YES);
-    CFMutableDictionaryRef dict = (CFMutableDictionaryRef)CFArrayGetValueAtIndex(attachments, 0);
     
-    CFDictionarySetValue(dict, kCMSampleAttachmentKey_DisplayImmediately, self->framePacing ? kCFBooleanFalse : kCFBooleanTrue);
-    CFDictionarySetValue(dict, kCMSampleAttachmentKey_EarlierDisplayTimesAllowed, kCFBooleanFalse);
-        // leaving kCMSampleAttachmentKey_IsDependedOnByOthers to unknown reduce latency
+    // frame pacing logic
+    Float64 hostNow = CMTimeGetSeconds(CMClockGetTime(CMClockGetHostTimeClock()));
+    Float64 delta = (Float64)du->presentationTimeMs / 1000.0 - hostNow;
+    const Float64 alpha = 0.05;
+    if(avgDeltaTime.hasValue){
+        avgDeltaTime.value = avgDeltaTime.value * (1.0 - alpha) + delta * alpha;
+    }else{
+        avgDeltaTime.value = delta;
+        avgDeltaTime.hasValue = YES;
+    }
+    Float64 targetTb = hostNow + avgDeltaTime.value - framePacingDelayInMs / 1000.0;
+    CMTime targetTbTime =  CMTimeMakeWithSeconds(targetTb, USEC_PER_SEC);
     
-    if (du->frameType == FRAME_TYPE_PFRAME) {
-            // P-frame
-        CFDictionarySetValue(dict, kCMSampleAttachmentKey_NotSync, kCFBooleanTrue);
-        CFDictionarySetValue(dict, kCMSampleAttachmentKey_DependsOnOthers, kCFBooleanTrue);
+    
+    if (displayLayer.controlTimebase == NULL) {
+        CMTimebaseRef timebase = NULL;
+        
+        CMTimebaseCreateWithSourceClock(kCFAllocatorDefault,CMClockGetHostTimeClock(),&timebase);
+        
+        displayLayer.controlTimebase = timebase;
+        CFRelease(timebase);
+        
+        CMTimebaseSetTime(displayLayer.controlTimebase, targetTbTime);
+        CMTimebaseSetRate(displayLayer.controlTimebase, 1.0);
     } else {
-            // I-frame
-        CFDictionarySetValue(dict, kCMSampleAttachmentKey_NotSync, kCFBooleanFalse);
-        CFDictionarySetValue(dict, kCMSampleAttachmentKey_DependsOnOthers, kCFBooleanFalse);
+        CMTime tbTime = CMTimebaseGetTime(displayLayer.controlTimebase);
+        Float64 diff = fabs(CMTimeGetSeconds(CMTimeSubtract(targetTbTime, tbTime)));
+        static const Float64 kResyncThreshold = 0.005; // 5ms
+        if (diff > kResyncThreshold) {
+            CMTimebaseSetTime(displayLayer.controlTimebase, targetTbTime);
+            NSLog(@"pts diff=%f ms, trigger resync",diff * 1000);
+        }
     }
 
     // Enqueue the next frame

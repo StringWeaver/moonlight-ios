@@ -32,5 +32,6 @@
 @property BOOL useFramePacing;
 @property NSData* serverCert;
 @property VideoRendererMode videoRendererMode;
+@property float framePacingDelayInMs;
 
 @end

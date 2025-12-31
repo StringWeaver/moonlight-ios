@@ -29,7 +29,8 @@
                   btMouseSupport:(BOOL)btMouseSupport
                absoluteTouchMode:(BOOL)absoluteTouchMode
                     statsOverlay:(BOOL)statsOverlay
-               videoRendererMode:(VideoRendererMode)videoRendererMode;
+               videoRendererMode:(VideoRendererMode)videoRendererMode
+            framePacingDelayInMs:(float)framePacingDelayInMs;
 
 - (NSArray*) getHosts;
 - (void) updateHost:(TemporaryHost*)host;

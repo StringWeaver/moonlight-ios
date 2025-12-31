@@ -69,6 +69,7 @@
                absoluteTouchMode:(BOOL)absoluteTouchMode
                     statsOverlay:(BOOL)statsOverlay
                videoRendererMode:(VideoRendererMode)videoRendererMode
+            framePacingDelayInMs:(float)framePacingDelayInMs
 {
     
     [_managedObjectContext performBlockAndWait:^{
@@ -90,6 +91,7 @@
         settingsToSave.absoluteTouchMode = absoluteTouchMode;
         settingsToSave.statsOverlay = statsOverlay;
         settingsToSave.videoRendererMode = videoRendererMode;
+        settingsToSave.framePacingDelayInMs = framePacingDelayInMs;
         
         [self saveData];
     }];
