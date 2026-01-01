@@ -588,7 +588,7 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
         
     CMSampleBufferRef sampleBuffer;
     
-    CMSampleTimingInfo sampleTiming = {kCMTimeInvalid, CMTimeMakeWithSeconds(du->presentationTimeMs / 1000.0, USEC_PER_SEC), kCMTimeInvalid};
+    CMSampleTimingInfo sampleTiming = {kCMTimeInvalid, CMTimeMakeWithSeconds(du->presentationTimeUs / 1e6, USEC_PER_SEC), kCMTimeInvalid};
     size_t sampleSize = CMBlockBufferGetDataLength(frameBlockBuffer);
     status = CMSampleBufferCreateReady(kCFAllocatorDefault,
                                   frameBlockBuffer,
@@ -604,7 +604,7 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
     
     // frame pacing logic
     Float64 hostNow = CMTimeGetSeconds(CMClockGetTime(CMClockGetHostTimeClock()));
-    Float64 delta = (Float64)du->presentationTimeMs / 1000.0 - hostNow;
+    Float64 delta = (Float64)du->presentationTimeUs / 1e6 - hostNow;
     const Float64 alpha = 0.05;
     if(avgDeltaTime.hasValue){
         avgDeltaTime.value = avgDeltaTime.value * (1.0 - alpha) + delta * alpha;
