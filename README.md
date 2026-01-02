@@ -5,7 +5,7 @@ This is a improved version of moonlight-ios, originally intended for macOS porti
 
 ## Key Features:
 - Mac catalyst support
-- Lower latency by directly push frames to renderer
+- Fix video blurry issue on original version
 - Smoother frame pacing method
 - Newer moonlight-common-c library
 # Original ReadMe
