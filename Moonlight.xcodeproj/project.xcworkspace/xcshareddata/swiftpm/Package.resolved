@@ -1,5 +1,5 @@
 {
-  "originHash" : "33cb435d7afd22d723d1c70e84217100bcdc9d477da68105883540204bc2c463",
+  "originHash" : "30e75b5ed8907f9b39360d16d69512f0abd4f39bbfb6f3b2c19dedd73e67b385",
   "pins" : [
     {
       "identity" : "ffmpegkit",
@@ -7,7 +7,7 @@
       "location" : "https://github.com/StringWeaver/FFmpegKit.git",
       "state" : {
         "branch" : "main",
-        "revision" : "427a18ac5c92ddeca72a61371ed1904e09bbc89a"
+        "revision" : "7a09a097f45dd2748bd7dbc001fce1ad60497466"
       }
     },
     {
