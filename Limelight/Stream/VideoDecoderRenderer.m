@@ -24,6 +24,8 @@ typedef struct {
     Float64 value;
 } ExpAvgValue;
 
+static const int32_t timeScale = 90000; // RTP packets use a 90 KHz presentation timestamp clock
+
 @implementation VideoDecoderRenderer {
     StreamView* _view;
     id<ConnectionCallbacks> _callbacks;
@@ -43,6 +45,7 @@ typedef struct {
     float framePacingDelayInMs;
     ExpAvgValue avgDeltaTime;
     uint32_t frameCount;
+    CMTime startTime;
 }
 
 - (void)reinitializeDisplayLayer
@@ -84,6 +87,7 @@ typedef struct {
     
     
     frameCount = 0;
+    startTime = CMTimeConvertScale(CMClockGetTime(CMClockGetHostTimeClock()), timeScale, kCMTimeRoundingMethod_Default);
     
     [self reinitializeDisplayLayer];
     
@@ -99,7 +103,7 @@ typedef struct {
 {
     _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(emptyDisplayLinkCallback:)];
     if (@available(iOS 15.0, tvOS 15.0, *)) {
-        _displayLink.preferredFrameRateRange = CAFrameRateRangeMake(60, self->frameRate, self->frameRate);
+        _displayLink.preferredFrameRateRange = CAFrameRateRangeMake(1, self->frameRate, self->frameRate);
     }
     else {
         _displayLink.preferredFramesPerSecond = self->frameRate;
@@ -592,7 +596,6 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
     }
         
     CMSampleBufferRef sampleBuffer;
-    const int32_t timeScale = 90000; // RTP packets use a 90 KHz presentation timestamp clock
     CMTime PTS = CMTimeMake(du->rtpTimestamp, timeScale);
     CMSampleTimingInfo sampleTiming = {kCMTimeInvalid, PTS, kCMTimeInvalid};
     size_t sampleSize = CMBlockBufferGetDataLength(frameBlockBuffer);
@@ -629,6 +632,7 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
     // frame pacing logic
     if(frameCount % 10 == 0) { // execute every 10 frame
         CMTime hostNow = CMTimeConvertScale(CMClockGetTime(CMClockGetHostTimeClock()), timeScale, kCMTimeRoundingMethod_Default);
+        hostNow = CMTimeSubtract(hostNow, startTime); // reduce math error
         Float64 delta = CMTimeGetSeconds(CMTimeSubtract(PTS, hostNow));
         NSAssert(!isnan(delta) && isfinite(delta), @"Ivalid delta value!");
         const Float64 alpha = 0.01;
