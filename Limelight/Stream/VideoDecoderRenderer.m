@@ -8,6 +8,7 @@
 
 #import "VideoDecoderRenderer.h"
 #import "StreamView.h"
+#import "math.h"
 
 #include <libavcodec/avcodec.h>
 #include <libavcodec/cbs.h>
@@ -41,6 +42,7 @@ typedef struct {
     BOOL framePacing;
     float framePacingDelayInMs;
     ExpAvgValue avgDeltaTime;
+    uint32_t frameCount;
 }
 
 - (void)reinitializeDisplayLayer
@@ -79,6 +81,9 @@ typedef struct {
     parameterSetBuffers = [[NSMutableArray alloc] init];
     
     avgDeltaTime.hasValue = NO;
+    
+    
+    frameCount = 0;
     
     [self reinitializeDisplayLayer];
     
@@ -587,8 +592,9 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
     }
         
     CMSampleBufferRef sampleBuffer;
-    
-    CMSampleTimingInfo sampleTiming = {kCMTimeInvalid, CMTimeMakeWithSeconds(du->presentationTimeUs / 1e6, USEC_PER_SEC), kCMTimeInvalid};
+    const int32_t timeScale = 90000; // RTP packets use a 90 KHz presentation timestamp clock
+    CMTime PTS = CMTimeMake(du->rtpTimestamp, timeScale);
+    CMSampleTimingInfo sampleTiming = {kCMTimeInvalid, PTS, kCMTimeInvalid};
     size_t sampleSize = CMBlockBufferGetDataLength(frameBlockBuffer);
     status = CMSampleBufferCreateReady(kCFAllocatorDefault,
                                   frameBlockBuffer,
@@ -600,40 +606,6 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
         CFRelease(dataBlockBuffer);
         CFRelease(frameBlockBuffer);
         return DR_NEED_IDR;
-    }
-    
-    // frame pacing logic
-    Float64 hostNow = CMTimeGetSeconds(CMClockGetTime(CMClockGetHostTimeClock()));
-    Float64 delta = (Float64)du->presentationTimeUs / 1e6 - hostNow;
-    const Float64 alpha = 0.05;
-    if(avgDeltaTime.hasValue){
-        avgDeltaTime.value = avgDeltaTime.value * (1.0 - alpha) + delta * alpha;
-    }else{
-        avgDeltaTime.value = delta;
-        avgDeltaTime.hasValue = YES;
-    }
-    Float64 targetTb = hostNow + avgDeltaTime.value - framePacingDelayInMs / 1000.0;
-    CMTime targetTbTime =  CMTimeMakeWithSeconds(targetTb, USEC_PER_SEC);
-    
-    
-    if (displayLayer.controlTimebase == NULL) {
-        CMTimebaseRef timebase = NULL;
-        
-        CMTimebaseCreateWithSourceClock(kCFAllocatorDefault,CMClockGetHostTimeClock(),&timebase);
-        
-        displayLayer.controlTimebase = timebase;
-        CFRelease(timebase);
-        
-        CMTimebaseSetTime(displayLayer.controlTimebase, targetTbTime);
-        CMTimebaseSetRate(displayLayer.controlTimebase, 1.0);
-    } else {
-        CMTime tbTime = CMTimebaseGetTime(displayLayer.controlTimebase);
-        Float64 diff = fabs(CMTimeGetSeconds(CMTimeSubtract(targetTbTime, tbTime)));
-        static const Float64 kResyncThreshold = 0.005; // 5ms
-        if (diff > kResyncThreshold) {
-            CMTimebaseSetTime(displayLayer.controlTimebase, targetTbTime);
-            NSLog(@"pts diff=%f ms, trigger resync",diff * 1000);
-        }
     }
 
     // Enqueue the next frame
@@ -653,6 +625,43 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
     CFRelease(dataBlockBuffer);
     CFRelease(frameBlockBuffer);
     CFRelease(sampleBuffer);
+    
+    // frame pacing logic
+    if(frameCount % 10 == 0) { // execute every 10 frame
+        CMTime hostNow = CMTimeConvertScale(CMClockGetTime(CMClockGetHostTimeClock()), timeScale, kCMTimeRoundingMethod_Default);
+        Float64 delta = CMTimeGetSeconds(CMTimeSubtract(PTS, hostNow));
+        NSAssert(!isnan(delta) && isfinite(delta), @"Ivalid delta value!");
+        const Float64 alpha = 0.01;
+        // use EMA to avoid network jitter cause frequently resync
+        if(avgDeltaTime.hasValue){
+            avgDeltaTime.value = avgDeltaTime.value * (1.0 - alpha) + delta * alpha;
+        } else {
+            avgDeltaTime.value = delta;
+            avgDeltaTime.hasValue = YES;
+        }
+        CMTime targetTb = CMTimeAdd(hostNow, CMTimeMakeWithSeconds(avgDeltaTime.value - framePacingDelayInMs / 1000.0, timeScale));
+        
+        if (displayLayer.controlTimebase == NULL) {
+            CMTimebaseRef timebase = NULL;
+            
+            CMTimebaseCreateWithSourceClock(kCFAllocatorDefault,CMClockGetHostTimeClock(),&timebase);
+            
+            displayLayer.controlTimebase = timebase;
+            CFRelease(timebase);
+            
+            CMTimebaseSetTime(displayLayer.controlTimebase, targetTb);
+            CMTimebaseSetRate(displayLayer.controlTimebase, 1.0);
+        } else {
+            CMTime tbTime = CMTimebaseGetTime(displayLayer.controlTimebase);
+            Float64 diff = fabs(CMTimeGetSeconds(CMTimeSubtract(targetTb, tbTime)));
+            static const Float64 kResyncThreshold = 0.002; // 2ms
+            if (diff > kResyncThreshold) {
+                CMTimebaseSetTime(displayLayer.controlTimebase, targetTb);
+                NSLog(@"pts diff=%.1f ms, trigger resync, delta=%.1f ms",diff * 1000, avgDeltaTime.value * 1000);
+            }
+        }
+    }
+    frameCount++;
     
     return DR_OK;
 }
