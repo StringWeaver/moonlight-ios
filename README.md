@@ -1,4 +1,13 @@
-# Moonlight iOS/tvOS
+# Moonlight iOS/tvOS/MacCatalyst
+# Indroduction
+This is a improved version of moonlight-ios, originally intended for personal use.
+
+Features:
+- Mac catalyst support
+- Lower latency by directly push frames to renderer
+- Smoother frame pacing method
+- Newer moonlight-common-c library
+# Original ReadMe
 
 [![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/kwv8vpwr457lqn25/branch/master?svg=true)](https://ci.appveyor.com/project/cgutman/moonlight-ios/branch/master)
 
