@@ -44,7 +44,6 @@ static const int32_t timeScale = 90000; // RTP packets use a 90 KHz presentation
     BOOL framePacing;
     float framePacingDelayInMs;
     ExpAvgValue avgDeltaTime;
-    uint32_t frameCount;
     CMTime startTime;
 }
 
@@ -60,6 +59,8 @@ static const int32_t timeScale = 90000; // RTP packets use a 90 KHz presentation
         // Hide the layer until we get an IDR frame. This ensures we
         // can see the loading progress label as the stream is starting.
     displayLayer.hidden = YES;
+    
+    displayLayer.opaque = YES;
     
     
     if (formatDesc != nil) {
@@ -85,8 +86,6 @@ static const int32_t timeScale = 90000; // RTP packets use a 90 KHz presentation
     
     avgDeltaTime.hasValue = NO;
     
-    
-    frameCount = 0;
     startTime = CMTimeConvertScale(CMClockGetTime(CMClockGetHostTimeClock()), timeScale, kCMTimeRoundingMethod_Default);
     
     [self reinitializeDisplayLayer];
@@ -159,7 +158,9 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
 
 - (void)stop
 {
-    [_displayLink invalidate];
+    if(_displayLink) {
+        [_displayLink invalidate];
+    }
 }
 
 #define NALU_START_PREFIX_SIZE 3
@@ -598,6 +599,7 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
     CMSampleBufferRef sampleBuffer;
     CMTime PTS = CMTimeMake(du->rtpTimestamp, timeScale);
     CMSampleTimingInfo sampleTiming = {kCMTimeInvalid, PTS, kCMTimeInvalid};
+    Float64 now  = _displayLink.targetTimestamp; // targetTimestamp is technically not now, but accurte enough for timebase calibration
     size_t sampleSize = CMBlockBufferGetDataLength(frameBlockBuffer);
     status = CMSampleBufferCreateReady(kCFAllocatorDefault,
                                   frameBlockBuffer,
@@ -630,12 +632,10 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
     CFRelease(sampleBuffer);
     
     // frame pacing logic
-    if(frameCount % 10 == 0) { // execute every 10 frame
-        CMTime hostNow = CMTimeConvertScale(CMClockGetTime(CMClockGetHostTimeClock()), timeScale, kCMTimeRoundingMethod_Default);
-        hostNow = CMTimeSubtract(hostNow, startTime); // reduce math error
-        Float64 delta = CMTimeGetSeconds(CMTimeSubtract(PTS, hostNow));
+    if(du->frameNumber < 300 || du->frameNumber % 10 == 0) { // execute every 10 frame
+        Float64 delta = CMTimeGetSeconds(PTS) - now;
         NSAssert(!isnan(delta) && isfinite(delta), @"Ivalid delta value!");
-        const Float64 alpha = 0.01;
+        const Float64 alpha = 0.02;
         // use EMA to avoid network jitter cause frequently resync
         if(avgDeltaTime.hasValue){
             avgDeltaTime.value = avgDeltaTime.value * (1.0 - alpha) + delta * alpha;
@@ -643,7 +643,7 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
             avgDeltaTime.value = delta;
             avgDeltaTime.hasValue = YES;
         }
-        CMTime targetTb = CMTimeAdd(hostNow, CMTimeMakeWithSeconds(avgDeltaTime.value - framePacingDelayInMs / 1000.0, timeScale));
+        CMTime targetTb = CMTimeMakeWithSeconds(now + avgDeltaTime.value - framePacingDelayInMs / 1000.0, timeScale);
         
         if (displayLayer.controlTimebase == NULL) {
             CMTimebaseRef timebase = NULL;
@@ -658,14 +658,13 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
         } else {
             CMTime tbTime = CMTimebaseGetTime(displayLayer.controlTimebase);
             Float64 diff = fabs(CMTimeGetSeconds(CMTimeSubtract(targetTb, tbTime)));
-            static const Float64 kResyncThreshold = 0.002; // 2ms
+            static const Float64 kResyncThreshold = 0.01; // 10ms
             if (diff > kResyncThreshold) {
                 CMTimebaseSetTime(displayLayer.controlTimebase, targetTb);
                 NSLog(@"pts diff=%.1f ms, trigger resync, delta=%.1f ms",diff * 1000, avgDeltaTime.value * 1000);
             }
         }
     }
-    frameCount++;
     
     return DR_OK;
 }
