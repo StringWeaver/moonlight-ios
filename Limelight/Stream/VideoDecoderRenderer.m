@@ -15,6 +15,7 @@
 #include <libavcodec/cbs_av1.h>
 #include <libavformat/avio.h>
 #include <libavutil/mem.h>
+#include <pthread.h>
 
 // Private libavformat API for writing the AV1 Codec Configuration Box
 extern int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size,
@@ -44,7 +45,7 @@ static const int32_t timeScale = 90000; // RTP packets use a 90 KHz presentation
     BOOL framePacing;
     float framePacingDelayInMs;
     ExpAvgValue avgDeltaTime;
-    CMTime startTime;
+    long maxRefreshRate;
 }
 
 - (void)reinitializeDisplayLayer
@@ -86,7 +87,7 @@ static const int32_t timeScale = 90000; // RTP packets use a 90 KHz presentation
     
     avgDeltaTime.hasValue = NO;
     
-    startTime = CMTimeConvertScale(CMClockGetTime(CMClockGetHostTimeClock()), timeScale, kCMTimeRoundingMethod_Default);
+    maxRefreshRate = _view.window.screen.maximumFramesPerSecond;
     
     [self reinitializeDisplayLayer];
     
@@ -102,7 +103,7 @@ static const int32_t timeScale = 90000; // RTP packets use a 90 KHz presentation
 {
     _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(emptyDisplayLinkCallback:)];
     if (@available(iOS 15.0, tvOS 15.0, *)) {
-        _displayLink.preferredFrameRateRange = CAFrameRateRangeMake(1, self->frameRate, self->frameRate);
+        _displayLink.preferredFrameRateRange = CAFrameRateRangeMake(1, self->maxRefreshRate, self->frameRate);
     }
     else {
         _displayLink.preferredFramesPerSecond = self->frameRate;
@@ -114,7 +115,7 @@ static const int32_t timeScale = 90000; // RTP packets use a 90 KHz presentation
 {
     _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(displayLinkCallback:)];
     if (@available(iOS 15.0, tvOS 15.0, *)) {
-        _displayLink.preferredFrameRateRange = CAFrameRateRangeMake(1, self->frameRate, self->frameRate);
+        _displayLink.preferredFrameRateRange = CAFrameRateRangeMake(1, self->maxRefreshRate, self->frameRate);
     }
     else {
         _displayLink.preferredFramesPerSecond = self->frameRate;
@@ -422,6 +423,13 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
 // This function must free data for bufferType == BUFFER_TYPE_PICDATA
 - (int)submitDecodeBuffer:(unsigned char *)data length:(int)length bufferType:(int)bufferType decodeUnit:(PDECODE_UNIT)du
 {
+    static _Thread_local bool qosSet = false;
+    
+    if (!qosSet) {
+        qosSet = true;
+        pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0);
+    }
+    
     OSStatus status;
     
     // Construct a new format description object each time we receive an IDR frame
@@ -599,7 +607,7 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
     CMSampleBufferRef sampleBuffer;
     CMTime PTS = CMTimeMake(du->rtpTimestamp, timeScale);
     CMSampleTimingInfo sampleTiming = {kCMTimeInvalid, PTS, kCMTimeInvalid};
-    Float64 now  = _displayLink.targetTimestamp; // targetTimestamp is technically not now, but accurte enough for timebase calibration
+    Float64 now  = CACurrentMediaTime();
     size_t sampleSize = CMBlockBufferGetDataLength(frameBlockBuffer);
     status = CMSampleBufferCreateReady(kCFAllocatorDefault,
                                   frameBlockBuffer,
@@ -612,7 +620,6 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
         CFRelease(frameBlockBuffer);
         return DR_NEED_IDR;
     }
-
     // Enqueue the next frame
     [self->displayLayer enqueueSampleBuffer:sampleBuffer];
     
@@ -659,7 +666,7 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
             CMTime tbTime = CMTimebaseGetTime(displayLayer.controlTimebase);
             Float64 diff = fabs(CMTimeGetSeconds(CMTimeSubtract(targetTb, tbTime)));
             static const Float64 kResyncThreshold = 0.01; // 10ms
-            if (diff > kResyncThreshold) {
+            if (diff > kResyncThreshold || du->frameNumber == 300) {
                 CMTimebaseSetTime(displayLayer.controlTimebase, targetTb);
                 NSLog(@"pts diff=%.1f ms, trigger resync, delta=%.1f ms",diff * 1000, avgDeltaTime.value * 1000);
             }
