@@ -102,11 +102,12 @@ static const int32_t timeScale = 90000; // RTP packets use a 90 KHz presentation
 - (void)startForPushMode
 {
     _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(emptyDisplayLinkCallback:)];
+    float targetRefreshRate = MIN(self->frameRate,self->maxRefreshRate);
     if (@available(iOS 15.0, tvOS 15.0, *)) {
-        _displayLink.preferredFrameRateRange = CAFrameRateRangeMake(1, self->maxRefreshRate, self->frameRate);
+        _displayLink.preferredFrameRateRange = CAFrameRateRangeMake(targetRefreshRate, self->maxRefreshRate, targetRefreshRate);
     }
     else {
-        _displayLink.preferredFramesPerSecond = self->frameRate;
+        _displayLink.preferredFramesPerSecond = targetRefreshRate;
     }
     [_displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
 }
@@ -114,11 +115,12 @@ static const int32_t timeScale = 90000; // RTP packets use a 90 KHz presentation
 - (void)start
 {
     _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(displayLinkCallback:)];
+    float targetRefreshRate = MIN(self->frameRate,self->maxRefreshRate);
     if (@available(iOS 15.0, tvOS 15.0, *)) {
-        _displayLink.preferredFrameRateRange = CAFrameRateRangeMake(1, self->maxRefreshRate, self->frameRate);
+        _displayLink.preferredFrameRateRange = CAFrameRateRangeMake(targetRefreshRate, self->maxRefreshRate, targetRefreshRate);
     }
     else {
-        _displayLink.preferredFramesPerSecond = self->frameRate;
+        _displayLink.preferredFramesPerSecond = targetRefreshRate;
     }
     [_displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
 }
