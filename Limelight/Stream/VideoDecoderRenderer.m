@@ -624,6 +624,8 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
     // Typically yout don't need this, but I found it can reduce latency for unkonwn reason.
     CFArrayRef attachmentsArray = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, YES);
     CFMutableDictionaryRef dict = (CFMutableDictionaryRef)CFArrayGetValueAtIndex(attachmentsArray, 0);
+    // There is no B-frames in moonlight
+    CFDictionarySetValue(dict, kCMSampleAttachmentKey_EarlierDisplayTimesAllowed, kCFBooleanFalse);
     if (du->frameType == FRAME_TYPE_PFRAME) {
         CFDictionarySetValue(dict, kCMSampleAttachmentKey_NotSync, kCFBooleanTrue);
     }
