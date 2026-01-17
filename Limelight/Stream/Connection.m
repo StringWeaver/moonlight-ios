@@ -44,6 +44,8 @@ static AVAudioFormat *outputPcmFormat = nil;
 static OPUS_MULTISTREAM_CONFIGURATION audioConfig;
 static atomic_int queuePackets = 0;
 
+static AVAudioCompressedBuffer *opusCompressedBuffer = nil;
+
 static VideoDecoderRenderer* renderer;
 
 int DrDecoderSetup(int videoFormat, int width, int height, int redrawRate, void* context, int drFlags)
@@ -326,13 +328,15 @@ void ArDecodeAndPlaySample(char* sampleData, int sampleLength)
         return;
     }
 
-    AVAudioCompressedBuffer *opusCompressedBuffer = [[AVAudioCompressedBuffer alloc]
-            initWithFormat:inputOpusFormat
-            packetCapacity:1
-            maximumPacketSize:sampleLength];
-    if (!opusCompressedBuffer) {
-        Log(LOG_E, @"Failed to create AVAudioCompressedBuffer");
-        return;
+    if(!opusCompressedBuffer || opusCompressedBuffer.maximumPacketSize < sampleLength){
+        opusCompressedBuffer = [[AVAudioCompressedBuffer alloc]
+         initWithFormat:inputOpusFormat
+         packetCapacity:1
+         maximumPacketSize:sampleLength];
+        if (!opusCompressedBuffer) {
+            Log(LOG_E, @"Failed to create AVAudioCompressedBuffer");
+            return;
+        }
     }
     opusCompressedBuffer.packetCount = 1;
     if (opusCompressedBuffer.packetDescriptions != NULL) {

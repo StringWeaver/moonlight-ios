@@ -620,6 +620,14 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
         CFRelease(frameBlockBuffer);
         return DR_NEED_IDR;
     }
+    
+    // Typically yout don't need this, but I found it can reduce latency for unkonwn reason.
+    CFArrayRef attachmentsArray = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, YES);
+    CFMutableDictionaryRef dict = (CFMutableDictionaryRef)CFArrayGetValueAtIndex(attachmentsArray, 0);
+    if (du->frameType == FRAME_TYPE_PFRAME) {
+        CFDictionarySetValue(dict, kCMSampleAttachmentKey_NotSync, kCFBooleanTrue);
+    }
+    
     // Enqueue the next frame
     [self->displayLayer enqueueSampleBuffer:sampleBuffer];
     
@@ -637,6 +645,10 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
     CFRelease(dataBlockBuffer);
     CFRelease(frameBlockBuffer);
     CFRelease(sampleBuffer);
+    // Avoid memory leak inside videotoolbox
+    if(du->frameNumber % (frameRate * 2) == 0){
+        [displayLayer flush];
+    }
     
     // frame pacing logic
     if(du->frameNumber < 300 || du->frameNumber % 10 == 0) { // execute every 10 frame
