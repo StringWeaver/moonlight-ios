@@ -580,6 +580,15 @@ static const double X1_MOUSE_SPEED_DIVISOR = 2.5;
                 // This will prevent the legacy UITextField from receiving the event
                 handled = YES;
             }
+            UIKey *key = press.key;
+            if (key &&
+                key.keyCode == UIKeyboardHIDUsageKeyboardQ
+                && (key.modifierFlags & UIKeyModifierControl)
+                && (key.modifierFlags & UIKeyModifierAlternate)
+                && (key.modifierFlags & UIKeyModifierShift)) {
+                // disconnect when user presses Shift+Ctrl+Alt+Q, aligned with moonlight-qt
+                [interactionDelegate edgeSwiped];
+            }
         }
     }
     
@@ -840,9 +849,6 @@ static const double X1_MOUSE_SPEED_DIVISOR = 2.5;
     struct KeyEvent event = [KeyboardSupport translateKeyEvent:[[cmd input] characterAtIndex:0] withModifierFlags:[cmd modifierFlags]];
     [self sendLowLevelEvent:event];
 }
-- (void)ctrlOptionShiftQPressed:(UIKeyCommand *)cmd {
-    [interactionDelegate edgeSwiped];
-}
 
 - (void)sendLowLevelEvent:(struct KeyEvent)event {
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
@@ -872,9 +878,6 @@ static const double X1_MOUSE_SPEED_DIVISOR = 2.5;
     NSMutableArray<UIKeyCommand *> * commands = [NSMutableArray<UIKeyCommand *> array];
     dictCodes = [[NSDictionary alloc] initWithObjectsAndKeys: [NSNumber numberWithInt: 0x0d], @"\r", [NSNumber numberWithInt: 0x08], @"\b", [NSNumber numberWithInt: 0x1b], UIKeyInputEscape, [NSNumber numberWithInt: 0x28], UIKeyInputDownArrow, [NSNumber numberWithInt: 0x26], UIKeyInputUpArrow, [NSNumber numberWithInt: 0x25], UIKeyInputLeftArrow, [NSNumber numberWithInt: 0x27], UIKeyInputRightArrow, nil];
     
-    [commands addObject:[UIKeyCommand keyCommandWithInput:@"q"
-                                                modifierFlags:(UIKeyModifierControl | UIKeyModifierAlternate | UIKeyModifierShift)
-                                                       action:@selector(ctrlOptionShiftQPressed:)]];
     
     [charset enumerateSubstringsInRange:NSMakeRange(0, charset.length)
                                 options:NSStringEnumerationByComposedCharacterSequences
