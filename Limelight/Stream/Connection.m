@@ -12,6 +12,7 @@
 #import <VideoToolbox/VideoToolbox.h>
 #import <AVFoundation/AVFoundation.h>
 #include <stdatomic.h>
+#include "../../libs/tracy/public/tracy/TracyC.h"
 
 #include "Limelight.h"
 
@@ -119,10 +120,12 @@ void DrStop(void)
 
 int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit)
 {
+    TracyCZoneN(ctx, "DrSubmitDecodeUnit", true);
     int offset = 0;
     int ret;
     unsigned char* data = (unsigned char*) malloc(decodeUnit->fullLength);
     if (data == NULL) {
+        TracyCZoneEnd(ctx);
         // A frame was lost due to OOM condition
         return DR_NEED_IDR;
     }
@@ -177,6 +180,7 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit)
                                      decodeUnit:decodeUnit];
             if (ret != DR_OK) {
                 free(data);
+                TracyCZoneEnd(ctx);
                 return ret;
             }
         }
@@ -189,10 +193,13 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit)
     }
 
     // This function will take our picture data buffer
-    return [renderer submitDecodeBuffer:data
-                                 length:offset
-                             bufferType:BUFFER_TYPE_PICDATA
-                             decodeUnit:decodeUnit];
+    ret = [renderer submitDecodeBuffer:data
+                                length:offset
+                            bufferType:BUFFER_TYPE_PICDATA
+                            decodeUnit:decodeUnit];
+    TracyCFrameMarkNamed("VideoFrame");
+    TracyCZoneEnd(ctx);
+    return ret;
 }
 
 int ArInit(int audioConfiguration, POPUS_MULTISTREAM_CONFIGURATION opusConfig, void* context, int flags)
