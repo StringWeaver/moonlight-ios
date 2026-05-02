@@ -254,8 +254,6 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
     
     // We use the value for YUV without alpha, same as Chrome
     // https://developer.apple.com/library/archive/qa/qa1183/_index.html
-    SET_EXTENSION(kCMFormatDescriptionExtension_Depth, @24);
-    
     CodedBitstreamAV1Context* bitstreamCtx = (CodedBitstreamAV1Context*)cbsCtx->priv_data;
     AV1RawSequenceHeader* seqHeader = bitstreamCtx->sequence_header;
     if (seqHeader == NULL) {
@@ -264,6 +262,8 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
         ff_cbs_close(&cbsCtx);
         return nil;
     }
+    
+    SET_EXTENSION(kCMFormatDescriptionExtension_Depth, @(bitstreamCtx->bit_depth * 3));
     
     switch (seqHeader->color_config.color_primaries) {
         case 1: // CP_BT_709

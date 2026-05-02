@@ -7,9 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		9857AEEE1EBE85E10084F99A /* rswrapper.c in Sources */ = {isa = PBXBuildFile; fileRef = 6A90FRS00000000100000001 /* rswrapper.c */; };
+		9857AEEE1EBE85E10084F99B /* rswrapper.c in Sources */ = {isa = PBXBuildFile; fileRef = 6A90FRS00000000100000001 /* rswrapper.c */; };
 		983091DE24CEB69B00A0835D /* ConnectionTester.c in Sources */ = {isa = PBXBuildFile; fileRef = 983091DD24CEB69B00A0835D /* ConnectionTester.c */; };
 		983091DF24CEB69B00A0835D /* ConnectionTester.c in Sources */ = {isa = PBXBuildFile; fileRef = 983091DD24CEB69B00A0835D /* ConnectionTester.c */; };
-		9857AEF01EBE85E10084F99E /* rs.c in Sources */ = {isa = PBXBuildFile; fileRef = 9857AEEE1EBE85E10084F99E /* rs.c */; };
 		98AB2E401CAD425A0089BB98 /* AudioStream.c in Sources */ = {isa = PBXBuildFile; fileRef = 98AB2E1A1CAD423B0089BB98 /* AudioStream.c */; };
 		98AB2E411CAD425A0089BB98 /* ByteBuffer.c in Sources */ = {isa = PBXBuildFile; fileRef = 98AB2E1B1CAD423B0089BB98 /* ByteBuffer.c */; };
 		98AB2E421CAD425A0089BB98 /* Connection.c in Sources */ = {isa = PBXBuildFile; fileRef = 98AB2E1D1CAD423B0089BB98 /* Connection.c */; };
@@ -44,7 +45,6 @@
 		98F145382667D847004018E3 /* RtpVideoQueue.c in Sources */ = {isa = PBXBuildFile; fileRef = 98F145342667D847004018E3 /* RtpVideoQueue.c */; };
 		F74BEF9F2C1A707200224667 /* OpenSSL in Frameworks */ = {isa = PBXBuildFile; productRef = F74BEF9E2C1A707200224667 /* OpenSSL */; };
 		F74BEFA22C1A80D000224667 /* OpenSSL in Frameworks */ = {isa = PBXBuildFile; productRef = F74BEFA12C1A80D000224667 /* OpenSSL */; };
-		FB1A67F821324F4900507771 /* rs.c in Sources */ = {isa = PBXBuildFile; fileRef = 9857AEEE1EBE85E10084F99E /* rs.c */; };
 		FB1A67FA21324F4900507771 /* AudioStream.c in Sources */ = {isa = PBXBuildFile; fileRef = 98AB2E1A1CAD423B0089BB98 /* AudioStream.c */; };
 		FB1A67FB21324F4900507771 /* ByteBuffer.c in Sources */ = {isa = PBXBuildFile; fileRef = 98AB2E1B1CAD423B0089BB98 /* ByteBuffer.c */; };
 		FB1A67FC21324F4900507771 /* Connection.c in Sources */ = {isa = PBXBuildFile; fileRef = 98AB2E1D1CAD423B0089BB98 /* Connection.c */; };
@@ -85,8 +85,9 @@
 
 /* Begin PBXFileReference section */
 		983091DD24CEB69B00A0835D /* ConnectionTester.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ConnectionTester.c; sourceTree = "<group>"; };
-		9857AEEE1EBE85E10084F99E /* rs.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = rs.c; path = "moonlight-common-c/reedsolomon/rs.c"; sourceTree = "<group>"; };
-		9857AEEF1EBE85E10084F99E /* rs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = rs.h; path = "moonlight-common-c/reedsolomon/rs.h"; sourceTree = "<group>"; };
+		9857AEEE1EBE85E10084F99E /* rs.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = rs.c; path = "moonlight-common-c/nanors/rs.c"; sourceTree = "<group>"; };
+		9857AEEF1EBE85E10084F99E /* rs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = rs.h; path = "moonlight-common-c/nanors/rs.h"; sourceTree = "<group>"; };
+		6A90FRS00000000100000001 /* rswrapper.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = rswrapper.c; sourceTree = "<group>"; };
 		98AB2DF01CAD422B0089BB98 /* callbacks.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = callbacks.c; sourceTree = "<group>"; };
 		98AB2DF11CAD422B0089BB98 /* ChangeLog */ = {isa = PBXFileReference; lastKnownFileType = text; path = ChangeLog; sourceTree = "<group>"; };
 		98AB2DF21CAD422B0089BB98 /* CMakeLists.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
@@ -269,6 +270,7 @@
 		98AB2E191CAD423B0089BB98 /* src */ = {
 			isa = PBXGroup;
 			children = (
+				6A90FRS00000000100000001 /* rswrapper.c */,
 				98F1453A2667D852004018E3 /* RtpAudioQueue.h */,
 				98F145392667D852004018E3 /* RtpVideoQueue.h */,
 				98F145332667D847004018E3 /* RtpAudioQueue.c */,
@@ -411,7 +413,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				FB1A67F821324F4900507771 /* rs.c in Sources */,
+				9857AEEE1EBE85E10084F99A /* rswrapper.c in Sources */,
 				98F145362667D847004018E3 /* RtpAudioQueue.c in Sources */,
 				FB1A67FA21324F4900507771 /* AudioStream.c in Sources */,
 				FB1A67FB21324F4900507771 /* ByteBuffer.c in Sources */,
@@ -448,6 +450,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9857AEEE1EBE85E10084F99B /* rswrapper.c in Sources */,
 				98C1FC142184124C0023FDDF /* SimpleStun.c in Sources */,
 				98F145352667D847004018E3 /* RtpAudioQueue.c in Sources */,
 				98AB2E401CAD425A0089BB98 /* AudioStream.c in Sources */,
@@ -475,7 +478,6 @@
 				98AB2E541CAD427A0089BB98 /* packet.c in Sources */,
 				98AB2E551CAD427A0089BB98 /* peer.c in Sources */,
 				98AB2E561CAD427A0089BB98 /* protocol.c in Sources */,
-				9857AEF01EBE85E10084F99E /* rs.c in Sources */,
 				98AB2E571CAD427A0089BB98 /* unix.c in Sources */,
 				98AB2E581CAD427A0089BB98 /* win32.c in Sources */,
 			);
@@ -498,7 +500,11 @@
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = DM46QST4M7;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
-				HEADER_SEARCH_PATHS = "moonlight-common-c/enet/include";
+				HEADER_SEARCH_PATHS = (
+					"moonlight-common-c/enet/include",
+					"moonlight-common-c/nanors/deps/obl",
+					"moonlight-common-c/nanors/deps",
+				);
 				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = NO;
@@ -525,7 +531,11 @@
 				COPY_PHASE_STRIP = YES;
 				DEVELOPMENT_TEAM = DM46QST4M7;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
-				HEADER_SEARCH_PATHS = "moonlight-common-c/enet/include";
+				HEADER_SEARCH_PATHS = (
+					"moonlight-common-c/enet/include",
+					"moonlight-common-c/nanors/deps/obl",
+					"moonlight-common-c/nanors/deps",
+				);
 				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				MTL_ENABLE_DEBUG_INFO = NO;
 				ONLY_ACTIVE_ARCH = NO;
@@ -668,7 +678,11 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				EXECUTABLE_PREFIX = lib;
-				HEADER_SEARCH_PATHS = "moonlight-common-c/enet/include";
+				HEADER_SEARCH_PATHS = (
+					"moonlight-common-c/enet/include",
+					"moonlight-common-c/nanors/deps/obl",
+					"moonlight-common-c/nanors/deps",
+				);
 				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				ONLY_ACTIVE_ARCH = NO;
@@ -683,7 +697,11 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "iPhone Distribution";
 				EXECUTABLE_PREFIX = lib;
-				HEADER_SEARCH_PATHS = "moonlight-common-c/enet/include";
+				HEADER_SEARCH_PATHS = (
+					"moonlight-common-c/enet/include",
+					"moonlight-common-c/nanors/deps/obl",
+					"moonlight-common-c/nanors/deps",
+				);
 				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				ONLY_ACTIVE_ARCH = NO;
