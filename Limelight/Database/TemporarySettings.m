@@ -40,6 +40,7 @@
     self.useFramePacing = [[NSUserDefaults standardUserDefaults] integerForKey:@"useFramePacing"] != 0;
     self.playAudioOnPC = [[NSUserDefaults standardUserDefaults] boolForKey:@"audioOnPC"];
     self.enableHdr = [[NSUserDefaults standardUserDefaults] boolForKey:@"enableHdr"];
+    self.enableYUV444 = [[NSUserDefaults standardUserDefaults] boolForKey:@"enableYUV444"];
     self.optimizeGames = [[NSUserDefaults standardUserDefaults] boolForKey:@"optimizeGames"];
     self.multiController = [[NSUserDefaults standardUserDefaults] boolForKey:@"multipleControllers"];
     self.swapABXYButtons = [[NSUserDefaults standardUserDefaults] boolForKey:@"swapABXYButtons"];
@@ -80,6 +81,7 @@
     self.useFramePacing = settings.useFramePacing;
     self.playAudioOnPC = settings.playAudioOnPC;
     self.enableHdr = settings.enableHdr;
+    self.enableYUV444 = settings.enableYUV444;
     self.optimizeGames = settings.optimizeGames;
     self.multiController = settings.multiController;
     self.swapABXYButtons = settings.swapABXYButtons;

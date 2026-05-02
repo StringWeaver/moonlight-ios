@@ -246,6 +246,8 @@ BOOL isCustomResolution(CGSize res) {
         [self.hdrSelector setSelectedSegmentIndex:currentSettings.enableHdr ? 1 : 0];
     }
     
+    [self.yuv444Selector setSelectedSegmentIndex:currentSettings.enableYUV444 ? 1 : 0];
+    
     [self.touchModeSelector setSelectedSegmentIndex:currentSettings.absoluteTouchMode ? 1 : 0];
     [self.touchModeSelector addTarget:self action:@selector(touchModeChanged) forControlEvents:UIControlEventValueChanged];
     [self.statsOverlaySelector setSelectedSegmentIndex:currentSettings.statsOverlay ? 1 : 0];
@@ -548,6 +550,7 @@ BOOL isCustomResolution(CGSize res) {
     BOOL absoluteTouchMode = [self.touchModeSelector selectedSegmentIndex] == 1;
     BOOL statsOverlay = [self.statsOverlaySelector selectedSegmentIndex] == 1;
     BOOL enableHdr = [self.hdrSelector selectedSegmentIndex] == 1;
+    BOOL enableYUV444 = [self.yuv444Selector selectedSegmentIndex] == 1;
     VideoRendererMode videoRendererMode = [self.videoRendererModeSelector selectedSegmentIndex];
     float framePacingDelayInMs = self.framePacingDelaySlider.value;
     [dataMan saveSettingsWithBitrate:_bitrate
@@ -563,7 +566,8 @@ BOOL isCustomResolution(CGSize res) {
                       preferredCodec:preferredCodec
                       useFramePacing:useFramePacing
                            enableHdr:enableHdr
-                      btMouseSupport:btMouseSupport
+                   enableYUV444:enableYUV444
+                  btMouseSupport:btMouseSupport
                    absoluteTouchMode:absoluteTouchMode
                         statsOverlay:statsOverlay
                         videoRendererMode:videoRendererMode

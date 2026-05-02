@@ -702,6 +702,24 @@ static NSMutableSet* hostList;
         _streamConfig.supportedVideoFormats |= VIDEO_FORMAT_AV1_MAIN10;
     }
 #endif
+    
+    if (streamSettings.enableYUV444) {
+        if (_streamConfig.supportedVideoFormats & VIDEO_FORMAT_H264) {
+            _streamConfig.supportedVideoFormats |= VIDEO_FORMAT_H264_HIGH8_444;
+        }
+        if (_streamConfig.supportedVideoFormats & VIDEO_FORMAT_H265) {
+            _streamConfig.supportedVideoFormats |= VIDEO_FORMAT_H265_REXT8_444;
+        }
+        if (_streamConfig.supportedVideoFormats & VIDEO_FORMAT_H265_MAIN10) {
+            _streamConfig.supportedVideoFormats |= VIDEO_FORMAT_H265_REXT10_444;
+        }
+        if (_streamConfig.supportedVideoFormats & VIDEO_FORMAT_AV1_MAIN8) {
+            _streamConfig.supportedVideoFormats |= VIDEO_FORMAT_AV1_HIGH8_444;
+        }
+        if (_streamConfig.supportedVideoFormats & VIDEO_FORMAT_AV1_MAIN10) {
+            _streamConfig.supportedVideoFormats |= VIDEO_FORMAT_AV1_HIGH10_444;
+        }
+    }
 }
 
 - (void)appLongClicked:(TemporaryApp *)app view:(UIView *)view {

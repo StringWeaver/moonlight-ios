@@ -37,6 +37,7 @@ typedef NS_ENUM(int16_t, VideoRendererMode) {
 @property (nonatomic) BOOL playAudioOnPC;
 @property (nonatomic) BOOL optimizeGames;
 @property (nonatomic) BOOL enableHdr;
+@property (nonatomic) BOOL enableYUV444;
 @property (nonatomic) BOOL btMouseSupport;
 @property (nonatomic) BOOL absoluteTouchMode;
 @property (nonatomic) BOOL statsOverlay;
