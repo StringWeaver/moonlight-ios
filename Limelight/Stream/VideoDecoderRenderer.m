@@ -43,7 +43,6 @@ static const int32_t timeScale = 90000; // RTP packets use a 90 KHz presentation
     CMVideoFormatDescriptionRef formatDesc;
     
     CADisplayLink* _displayLink;
-    BOOL framePacing;
     float framePacingDelayInMs;
     ExpAvgValue avgDeltaTime;
     long maxRefreshRate;
@@ -81,7 +80,6 @@ static const int32_t timeScale = 90000; // RTP packets use a 90 KHz presentation
     _view = view;
     _callbacks = callbacks;
     _streamAspectRatio = (float)config.width / (float)config.height;
-    framePacing = config.useFramePacing;
     framePacingDelayInMs = config.framePacingDelayInMs;
     
     parameterSetBuffers = [[NSMutableArray alloc] init];
@@ -142,22 +140,6 @@ int DrSubmitDecodeUnit(PDECODE_UNIT decodeUnit);
     while (LiPollNextVideoFrame(&handle, &du)) {
         LiCompleteVideoFrame(handle, DrSubmitDecodeUnit(du));
         TracyCFrameMarkNamed("VideoFrame");
-        
-        if (framePacing) {
-            // Calculate the actual display refresh rate
-            double displayRefreshRate = 1 / (_displayLink.targetTimestamp - _displayLink.timestamp);
-            
-            // Only pace frames if the display refresh rate is >= 90% of our stream frame rate.
-            // Battery saver, accessibility settings, or device thermals can cause the actual
-            // refresh rate of the display to drop below the physical maximum.
-            if (displayRefreshRate >= frameRate * 0.9f) {
-                // Keep one pending frame to smooth out gaps due to
-                // network jitter at the cost of 1 frame of latency
-                if (LiGetPendingVideoFrames() == 1) {
-                    break;
-                }
-            }
-        }
     }
 }
 

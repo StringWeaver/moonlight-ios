@@ -24,7 +24,6 @@
 @property (strong, nonatomic) IBOutlet UISegmentedControl *codecSelector;
 @property (strong, nonatomic) IBOutlet UISegmentedControl *hdrSelector;
 @property (strong, nonatomic) IBOutlet UISegmentedControl *yuv444Selector;
-@property (strong, nonatomic) IBOutlet UISegmentedControl *framePacingSelector;
 @property (strong, nonatomic) IBOutlet UISegmentedControl *btMouseSelector;
 @property (strong, nonatomic) IBOutlet UISegmentedControl *statsOverlaySelector;
 @property (strong, nonatomic) IBOutlet UISegmentedControl *videoRendererModeSelector;

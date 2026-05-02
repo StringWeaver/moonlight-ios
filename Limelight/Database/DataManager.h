@@ -24,7 +24,6 @@
                  swapABXYButtons:(BOOL)swapABXYButtons
                        audioOnPC:(BOOL)audioOnPC
                   preferredCodec:(uint32_t)preferredCodec
-                  useFramePacing:(BOOL)useFramePacing
                        enableHdr:(BOOL)enableHdr
                    enableYUV444:(BOOL)enableYUV444
                   btMouseSupport:(BOOL)btMouseSupport
